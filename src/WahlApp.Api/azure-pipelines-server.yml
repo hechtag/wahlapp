@@ -52,7 +52,7 @@ jobs:
       dockerFile: 'src/WahlApp.Api/Dockerfile'
       imageName: '$(ImageName)'
       useDefaultContext: false
-      buildContext: 'src/WahlApp.Api'
+      buildContext: 'src'
     displayName: 'Build the Docker image'
 
   - task: Docker@1
