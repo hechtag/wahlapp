@@ -1,0 +1,83 @@
+name : wahlapp-server-CI
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - src/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  ImageName: 'hechtag/wahlapp-server:latest'
+
+jobs:
+- job: build
+  displayName: build
+  steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 1
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '**/*.csproj'
+    displayName: 'Restore Nuget Packages'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+      projects: '**/*.csproj'
+      arguments: '--no-restore'
+    displayName: 'Build projects'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: '**/*Tests.csproj'
+      arguments: '--no-restore --no-build'
+    displayName: 'Run Tests'
+
+  - task: Docker@1
+    inputs:
+      containerregistrytype: 'Container Registry'
+      dockerRegistryEndpoint: 'DockerHub - hechtag'
+      command: 'Build an image'
+      dockerFile: 'src/WahlApp.Api/Dockerfile'
+      imageName: '$(ImageName)'
+      useDefaultContext: false
+      buildContext: 'src/WahlApp.Api'
+    displayName: 'Build the Docker image'
+
+  - task: Docker@1
+    inputs:
+      containerregistrytype: 'Container Registry'
+      dockerRegistryEndpoint: 'DockerHub - hechtag'
+      command: 'Push an image'
+      imageName: '$(ImageName)'
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: 'Push the Docker image to Dockerhub'
+
+- deployment: DeployServer
+  displayName: deploy wahlapp server
+  # creates an environment if it doesn't exist
+  dependsOn: build
+  environment:
+   name: wahlapp
+   resourceType: VirtualMachine
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - script: docker stop wahlapp-server || echo no container
+          displayName: stop container
+        - script: docker rmi hechtag/wahlapp-server || echo no image
+          displayName: remove image
+        - script: docker run -d --rm -p 81:80 -v /srv/docker/wahlapp-server/data:/app/data --name wahlapp-server hechtag/wahllapp-server
+          displayName: start new container
