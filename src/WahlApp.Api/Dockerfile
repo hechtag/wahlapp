@@ -7,7 +7,7 @@ EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
-COPY ["WahlApp.Api/WahlApp.Api.csproj", "WahlApp.Api/"]
+COPY ["WahlApp.Api.csproj", "WahlApp.Api/"]
 RUN dotnet restore "WahlApp.Api/WahlApp.Api.csproj"
 COPY . .
 WORKDIR "/src/WahlApp.Api"
