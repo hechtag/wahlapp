@@ -79,5 +79,5 @@ jobs:
           displayName: stop container
         - script: docker rmi hechtag/wahlapp-server || echo no image
           displayName: remove image
-        - script: docker run -d --rm -p 81:80 -v /srv/docker/wahlapp-server/data:/app/data --name wahlapp-server hechtag/wahllapp-server
+        - script: docker run -d --rm -p 91:80 -v /srv/docker/wahlapp-server/data:/app/data --name wahlapp-server hechtag/wahllapp-server
           displayName: start new container
