@@ -49,7 +49,7 @@ jobs:
       containerregistrytype: 'Container Registry'
       dockerRegistryEndpoint: 'DockerHub - hechtag'
       command: 'Build an image'
-      dockerFile: 'src/WahlApp.Api/Dockerfile'
+      dockerFile: 'src/server/WahlApp.Api/Dockerfile'
       imageName: '$(ImageName)'
       useDefaultContext: false
       buildContext: 'src'
