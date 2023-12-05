@@ -77,7 +77,9 @@ jobs:
         steps:
         - script: docker stop wahlapp-server || echo no container
           displayName: stop container
-        - script: docker rmi hechtag/wahlapp-server || echo no image
-          displayName: remove image
+        - script: docker pull hechtag/wahlapp-server || echo no image
+          displayName: repull image
         - script: docker run -d --rm -p 81:80 -v /srv/docker/wahlapp-server/data:/app/data --name wahlapp-server hechtag/wahlapp-server
+          displayName: start new container
+        - script: docker image prune -a -f
           displayName: start new container
