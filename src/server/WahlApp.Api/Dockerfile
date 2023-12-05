@@ -8,7 +8,7 @@ VOLUME /app/data
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
-COPY ["WahlApp.Api/WahlApp.Api.csproj", "WahlApp.Api/"]
+COPY ["server/WahlApp.Api/WahlApp.Api.csproj", "WahlApp.Api/"]
 RUN dotnet restore "WahlApp.Api/WahlApp.Api.csproj"
 COPY . .
 WORKDIR "/src/WahlApp.Api"
