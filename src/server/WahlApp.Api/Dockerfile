@@ -6,11 +6,11 @@ EXPOSE 80
 EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-WORKDIR /src
+WORKDIR /src/server
 COPY ["WahlApp.Api/WahlApp.Api.csproj", "WahlApp.Api/"]
 RUN dotnet restore "WahlApp.Api/WahlApp.Api.csproj"
 COPY . .
-WORKDIR "/src/WahlApp.Api"
+WORKDIR "/src/server/WahlApp.Api"
 RUN dotnet build "WahlApp.Api.csproj" -c Release -o /app/build
 
 FROM build AS publish
