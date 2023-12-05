@@ -82,4 +82,4 @@ jobs:
         - script: docker run -d --rm -p 81:80 -v /srv/docker/wahlapp-server/data:/app/data --name wahlapp-server hechtag/wahlapp-server
           displayName: start new container
         - script: docker image prune -a -f
-          displayName: start new container
+          displayName: prune images
