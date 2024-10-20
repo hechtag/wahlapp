@@ -3,34 +3,30 @@ module Server
 open SAFE
 open Saturn
 open Shared
+open System
 
 module Storage =
-    let todos =
-        ResizeArray [
-            Todo.create "Create new SAFE project"
-            Todo.create "Write your app"
-            Todo.create "Ship it!!!"
-        ]
+    let waehlers = ResizeArray [ Waehler.create "Jannis"; Waehler.create "Muri" ]
 
-    let addTodo todo =
-        if Todo.isValid todo.Description then
-            todos.Add todo
+    let addWaehler waehler =
+        if String.IsNullOrWhiteSpace waehler.Name |> not then
+            waehlers.Add waehler
             Ok()
         else
-            Error "Invalid todo"
+            Error "Invalid waehler"
 
-let todosApi ctx = {
-    getTodos = fun () -> async { return Storage.todos |> List.ofSeq }
-    addTodo =
+let waehlerApi ctx = {
+    getWaehlers = fun () -> async { return Storage.waehlers |> List.ofSeq }
+    addWaehler =
         fun todo -> async {
             return
-                match Storage.addTodo todo with
+                match Storage.addWaehler todo with
                 | Ok() -> todo
                 | Error e -> failwith e
         }
 }
 
-let webApp = Api.make todosApi
+let webApp = Api.make waehlerApi
 
 let app = application {
     use_router webApp

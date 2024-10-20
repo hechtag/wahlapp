@@ -2,18 +2,13 @@ namespace Shared
 
 open System
 
-type Todo = { Id: Guid; Description: string }
+type Waehler = { Id: Guid; Name: string }
 
-module Todo =
-    let isValid (description: string) =
-        String.IsNullOrWhiteSpace description |> not
+module Waehler =
 
-    let create (description: string) = {
-        Id = Guid.NewGuid()
-        Description = description
-    }
+    let create (name: string) = { Id = Guid.NewGuid(); Name = name }
 
-type ITodosApi = {
-    getTodos: unit -> Async<Todo list>
-    addTodo: Todo -> Async<Todo>
+type IWaehlerApi = {
+    getWaehlers: unit -> Async<Waehler list>
+    addWaehler: Waehler -> Async<Waehler>
 }

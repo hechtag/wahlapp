@@ -3,18 +3,19 @@ module Index
 open Elmish
 open SAFE
 open Shared
+open System
 
 type Model = {
-    Todos: RemoteData<Todo list>
+    Todos: RemoteData<Waehler list>
     Input: string
 }
 
 type Msg =
     | SetInput of string
-    | LoadTodos of ApiCall<unit, Todo list>
-    | SaveTodo of ApiCall<string, Todo>
+    | LoadTodos of ApiCall<unit, Waehler list>
+    | SaveTodo of ApiCall<string, Waehler>
 
-let todosApi = Api.makeProxy<ITodosApi> ()
+let waehlerApi = Api.makeProxy<IWaehlerApi> ()
 
 let init () =
     let initialModel = { Todos = NotStarted; Input = "" }
@@ -28,7 +29,8 @@ let update msg model =
     | LoadTodos msg ->
         match msg with
         | Start() ->
-            let loadTodosCmd = Cmd.OfAsync.perform todosApi.getTodos () (Finished >> LoadTodos)
+            let loadTodosCmd =
+                Cmd.OfAsync.perform waehlerApi.getWaehlers () (Finished >> LoadTodos)
 
             { model with Todos = Loading }, loadTodosCmd
         | Finished todos -> { model with Todos = Loaded todos }, Cmd.none
@@ -36,8 +38,8 @@ let update msg model =
         match msg with
         | Start todoText ->
             let saveTodoCmd =
-                let todo = Todo.create todoText
-                Cmd.OfAsync.perform todosApi.addTodo todo (Finished >> SaveTodo)
+                let todo = Waehler.create todoText
+                Cmd.OfAsync.perform waehlerApi.addWaehler todo (Finished >> SaveTodo)
 
             { model with Input = "" }, saveTodoCmd
         | Finished todo ->
@@ -50,7 +52,7 @@ let update msg model =
 open Feliz
 
 module ViewComponents =
-    let todoAction model dispatch =
+    let waehlerAction model dispatch =
         Html.div [
             prop.className "flex flex-col sm:flex-row mt-4 gap-4"
             prop.children [
@@ -68,14 +70,14 @@ module ViewComponents =
                 Html.button [
                     prop.className
                         "flex-no-shrink p-2 px-12 rounded bg-teal-600 outline-none focus:ring-2 ring-teal-300 font-bold text-white hover:bg-teal disabled:opacity-30 disabled:cursor-not-allowed"
-                    prop.disabled (Todo.isValid model.Input |> not)
+                    prop.disabled (model.Input |> fun i -> String.IsNullOrWhiteSpace i)
                     prop.onClick (fun _ -> dispatch (SaveTodo(Start model.Input)))
                     prop.text "Add"
                 ]
             ]
         ]
 
-    let todoList model dispatch =
+    let waehlerList model dispatch =
         Html.div [
             prop.className "bg-white/80 rounded-md shadow-md p-4 w-5/6 lg:w-3/4 lg:max-w-2xl"
             prop.children [
@@ -87,11 +89,11 @@ module ViewComponents =
                         | Loading -> Html.text "Loading..."
                         | Loaded todos ->
                             for todo in todos do
-                                Html.li [ prop.className "my-1"; prop.text todo.Description ]
+                                Html.li [ prop.className "my-1"; prop.text todo.Name ]
                     ]
                 ]
 
-                todoAction model dispatch
+                waehlerAction model dispatch
             ]
         ]
 
@@ -118,7 +120,8 @@ let view model dispatch =
                         prop.className "text-center text-5xl font-bold text-white mb-3 rounded-md p-4"
                         prop.text "WahlApp"
                     ]
-                    ViewComponents.todoList model dispatch
+                    ViewComponents.waehlerList model dispatch
+                    ViewComponents.waehlerList model dispatch
                 ]
             ]
         ]
