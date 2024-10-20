@@ -7,8 +7,16 @@ open System
 
 module Storage =
     let waehlers = ResizeArray [ Waehler.create "Jannis"; Waehler.create "Muri" ]
+    let kandidaten = ResizeArray [ Kandidat.create "Jannis"; Kandidat.create "Muri" ]
 
-    let addWaehler waehler =
+    let addKandidat (kandidat: Kandidat) =
+        if String.IsNullOrWhiteSpace kandidat.Name |> not then
+            kandidaten.Add kandidat
+            Ok()
+        else
+            Error "Invalid waehler"
+
+    let addWaehler (waehler: Waehler) =
         if String.IsNullOrWhiteSpace waehler.Name |> not then
             waehlers.Add waehler
             Ok()
@@ -26,7 +34,24 @@ let waehlerApi ctx = {
         }
 }
 
-let webApp = Api.make waehlerApi
+let kandidatApi ctx = {
+    getKandidaten = fun () -> async { return Storage.kandidaten |> List.ofSeq }
+    addKandidat =
+        fun todo -> async {
+            return
+                match Storage.addKandidat todo with
+                | Ok() -> todo
+                | Error e -> failwith e
+        }
+}
+
+let api ctx = {
+    Kandidat = kandidatApi ctx
+    Waehler = waehlerApi ctx
+
+}
+
+let webApp = Api.make api
 
 let app = application {
     use_router webApp

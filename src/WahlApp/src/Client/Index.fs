@@ -6,52 +6,121 @@ open Shared
 open System
 
 type Model = {
-    Todos: RemoteData<Waehler list>
-    Input: string
+    Waehler: RemoteData<Waehler list>
+    Kandidaten: RemoteData<Kandidat list>
+    WaehlerInput: string
+    KandidatInput: string
 }
 
 type Msg =
-    | SetInput of string
-    | LoadTodos of ApiCall<unit, Waehler list>
-    | SaveTodo of ApiCall<string, Waehler>
+    | SetInputWaehler of string
+    | SetInputKandidat of string
+    | LoadData of ApiCall<unit, Waehler list * Kandidat list>
+    | SaveWaehler of ApiCall<string, Waehler>
+    | SaveKandidat of ApiCall<string, Kandidat>
 
 let waehlerApi = Api.makeProxy<IWaehlerApi> ()
+let kandidatApi = Api.makeProxy<IKandidatApi> ()
 
 let init () =
-    let initialModel = { Todos = NotStarted; Input = "" }
-    let initialCmd = LoadTodos(Start()) |> Cmd.ofMsg
+    let initialModel = {
+        Waehler = NotStarted
+        WaehlerInput = ""
+        Kandidaten = NotStarted
+        KandidatInput = ""
+    }
+
+    let initialCmd = LoadData(Start()) |> Cmd.ofMsg
 
     initialModel, initialCmd
 
 let update msg model =
     match msg with
-    | SetInput value -> { model with Input = value }, Cmd.none
-    | LoadTodos msg ->
+    | SetInputWaehler value -> { model with WaehlerInput = value }, Cmd.none
+    | SetInputKandidat value -> { model with KandidatInput = value }, Cmd.none
+    | LoadData msg ->
         match msg with
         | Start() ->
-            let loadTodosCmd =
-                Cmd.OfAsync.perform waehlerApi.getWaehlers () (Finished >> LoadTodos)
+            let asdf =
+                fun () -> async {
+                    let! waehler = waehlerApi.getWaehlers ()
+                    let! kandidaten = kandidatApi.getKandidaten ()
+                    return waehler, kandidaten
+                }
 
-            { model with Todos = Loading }, loadTodosCmd
-        | Finished todos -> { model with Todos = Loaded todos }, Cmd.none
-    | SaveTodo msg ->
+
+            let qwer = Cmd.OfAsync.perform asdf () (Finished >> LoadData)
+
+            {
+                model with
+                    Waehler = Loading
+                    Kandidaten = Loading
+            },
+            qwer
+        | Finished(waehler, kandidaten) ->
+            {
+                model with
+                    Waehler = Loaded waehler
+                    Kandidaten = Loaded kandidaten
+            },
+            Cmd.none
+    | SaveWaehler msg ->
         match msg with
         | Start todoText ->
             let saveTodoCmd =
                 let todo = Waehler.create todoText
-                Cmd.OfAsync.perform waehlerApi.addWaehler todo (Finished >> SaveTodo)
+                Cmd.OfAsync.perform waehlerApi.addWaehler todo (Finished >> SaveWaehler)
 
-            { model with Input = "" }, saveTodoCmd
+            { model with WaehlerInput = "" }, saveTodoCmd
         | Finished todo ->
             {
                 model with
-                    Todos = model.Todos |> RemoteData.map (fun todos -> todos @ [ todo ])
+                    Waehler = model.Waehler |> RemoteData.map (fun todos -> todos @ [ todo ])
+            },
+            Cmd.none
+    | SaveKandidat msg ->
+        match msg with
+        | Start todoText ->
+            let saveTodoCmd =
+                let todo = Kandidat.create todoText
+                Cmd.OfAsync.perform kandidatApi.addKandidat todo (Finished >> SaveKandidat)
+
+            { model with KandidatInput = "" }, saveTodoCmd
+        | Finished todo ->
+            {
+                model with
+                    Kandidaten = model.Kandidaten |> RemoteData.map (fun todos -> todos @ [ todo ])
             },
             Cmd.none
 
 open Feliz
 
 module ViewComponents =
+    let kandidatenAction model dispatch =
+        Html.div [
+            prop.className "flex flex-col sm:flex-row mt-4 gap-4"
+            prop.children [
+                Html.input [
+                    prop.className
+                        "shadow appearance-none border rounded w-full py-2 px-3 outline-none focus:ring-2 ring-teal-300 text-grey-darker"
+                    prop.value model.KandidatInput
+                    prop.placeholder "What needs to be done?"
+                    prop.autoFocus true
+                    prop.onChange (SetInputKandidat >> dispatch)
+                    prop.onKeyPress (fun ev ->
+                        if ev.key = "Enter" then
+                            dispatch (SaveKandidat(Start model.KandidatInput)))
+                ]
+                Html.button [
+                    prop.className
+                        "flex-no-shrink p-2 px-12 rounded bg-teal-600 outline-none focus:ring-2 ring-teal-300 font-bold text-white hover:bg-teal disabled:opacity-30 disabled:cursor-not-allowed"
+                    prop.disabled (model.KandidatInput |> fun i -> String.IsNullOrWhiteSpace i)
+                    prop.onClick (fun _ -> dispatch (SaveKandidat(Start model.KandidatInput)))
+                    prop.text "Add"
+                ]
+            ]
+        ]
+
     let waehlerAction model dispatch =
         Html.div [
             prop.className "flex flex-col sm:flex-row mt-4 gap-4"
@@ -59,21 +128,41 @@ module ViewComponents =
                 Html.input [
                     prop.className
                         "shadow appearance-none border rounded w-full py-2 px-3 outline-none focus:ring-2 ring-teal-300 text-grey-darker"
-                    prop.value model.Input
+                    prop.value model.WaehlerInput
                     prop.placeholder "What needs to be done?"
                     prop.autoFocus true
-                    prop.onChange (SetInput >> dispatch)
+                    prop.onChange (SetInputWaehler >> dispatch)
                     prop.onKeyPress (fun ev ->
                         if ev.key = "Enter" then
-                            dispatch (SaveTodo(Start model.Input)))
+                            dispatch (SaveWaehler(Start model.WaehlerInput)))
                 ]
                 Html.button [
                     prop.className
                         "flex-no-shrink p-2 px-12 rounded bg-teal-600 outline-none focus:ring-2 ring-teal-300 font-bold text-white hover:bg-teal disabled:opacity-30 disabled:cursor-not-allowed"
-                    prop.disabled (model.Input |> fun i -> String.IsNullOrWhiteSpace i)
-                    prop.onClick (fun _ -> dispatch (SaveTodo(Start model.Input)))
+                    prop.disabled (model.WaehlerInput |> fun i -> String.IsNullOrWhiteSpace i)
+                    prop.onClick (fun _ -> dispatch (SaveWaehler(Start model.WaehlerInput)))
                     prop.text "Add"
                 ]
+            ]
+        ]
+
+    let kandidatenList model dispatch =
+        Html.div [
+            prop.className "bg-white/80 rounded-md shadow-md p-4 w-5/6 lg:w-3/4 lg:max-w-2xl"
+            prop.children [
+                Html.ol [
+                    prop.className "list-decimal ml-6"
+                    prop.children [
+                        match model.Kandidaten with
+                        | NotStarted -> Html.text "Not Started."
+                        | Loading -> Html.text "Loading..."
+                        | Loaded todos ->
+                            for todo in todos do
+                                Html.li [ prop.className "my-1"; prop.text todo.Name ]
+                    ]
+                ]
+
+                kandidatenAction model dispatch
             ]
         ]
 
@@ -84,7 +173,7 @@ module ViewComponents =
                 Html.ol [
                     prop.className "list-decimal ml-6"
                     prop.children [
-                        match model.Todos with
+                        match model.Waehler with
                         | NotStarted -> Html.text "Not Started."
                         | Loading -> Html.text "Loading..."
                         | Loaded todos ->
@@ -121,7 +210,7 @@ let view model dispatch =
                         prop.text "WahlApp"
                     ]
                     ViewComponents.waehlerList model dispatch
-                    ViewComponents.waehlerList model dispatch
+                    ViewComponents.kandidatenList model dispatch
                 ]
             ]
         ]
