@@ -8,4 +8,8 @@
     <Content Include="paket.references" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
+  <PropertyGroup>
+  <WarningsAsErrors>0025</WarningsAsErrors>
+</PropertyGroup>
+
 </Project>
