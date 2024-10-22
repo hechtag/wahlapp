@@ -10,20 +10,20 @@ let client =
     testList "Client" [
         testCase "Added todo"
         <| fun _ ->
-            let newTodo = Todo.create "new todo"
+            let newTodo = Waehler.create "new todo"
             let model, _ = init ()
-            let model, _ = update (LoadTodos (Finished [])) model
-            let model, _ = update (SaveTodo(Finished newTodo)) model
+            let model, _ = update (LoadData(Finished([], []))) model
+            let model, _ = update (SaveWaehler(Finished newTodo)) model
 
             Expect.equal
-                (model.Todos |> RemoteData.map _.Length |> RemoteData.defaultValue 0)
+                (model.Waehler |> RemoteData.map _.Length |> RemoteData.defaultValue 0)
                 1
                 "There should be 1 todo"
 
             Expect.equal
-                (model.Todos
+                (model.Waehler
                  |> RemoteData.map List.head
-                 |> RemoteData.defaultValue (Todo.create ""))
+                 |> RemoteData.defaultValue (Waehler.create ""))
                 newTodo
                 "Todo should equal new todo"
     ]

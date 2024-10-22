@@ -12,9 +12,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.fsproj" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
   <PropertyGroup>
     <WarningsAsErrors>0025</WarningsAsErrors>
-    </PropertyGroup>
-
+  </PropertyGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -7,9 +7,8 @@
     <Compile Include="Shared.fs" />
     <Content Include="paket.references" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
   <PropertyGroup>
-  <WarningsAsErrors>0025</WarningsAsErrors>
-</PropertyGroup>
-
+    <WarningsAsErrors>0025</WarningsAsErrors>
+  </PropertyGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
