@@ -4,10 +4,13 @@ open Elmish
 open Feliz
 open Feliz.Router
 
-type Url = | Home
+type Url =
+    | Home
+    | CreateWahl
 
 type Page =
     | Home of Home.Model
+    | CreateWahl of CreateWahl.Model
     | NotFound
 
 
@@ -18,6 +21,7 @@ type Model = {
 
 type Msg =
     | HomeMsg of Home.Msg
+    | CreateWahlMsg of CreateWahl.Msg
     | UrlChanged of Url option
 
 
@@ -25,19 +29,28 @@ let tryParseUrl =
     function
     | []
     | [ "home" ] -> Some Url.Home
+    | [ "create-wahl" ] -> Some Url.CreateWahl
     | _ -> None
 
 
 let initPage url =
     match url with
     | Some Url.Home ->
-        let page1Model, page1Msg = Home.init ()
+        let model, msg = Home.init ()
 
         {
             CurrentUrl = url
-            CurrentPage = (Page.Home page1Model)
+            CurrentPage = (Page.Home model)
         },
-        page1Msg |> Cmd.map HomeMsg
+        msg |> Cmd.map HomeMsg
+    | Some Url.CreateWahl ->
+        let model, msg = CreateWahl.init ()
+
+        {
+            CurrentUrl = url
+            CurrentPage = (Page.CreateWahl model)
+        },
+        msg |> Cmd.map CreateWahlMsg
     | None ->
         {
             CurrentUrl = url
@@ -72,6 +85,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         router.children [
             match model.CurrentPage with
             | Page.Home homeModel -> Home.view homeModel (HomeMsg >> dispatch)
+            | Page.CreateWahl wahlModel -> CreateWahl.view wahlModel (CreateWahlMsg >> dispatch)
             | Page.NotFound -> Html.p "Not found"
         ]
     ]

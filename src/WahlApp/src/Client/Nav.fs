@@ -13,6 +13,6 @@ let view =
 
         prop.children [
             Html.a [ prop.href "/"; prop.text "Home" ]
-            Html.a [ prop.href "/page"; prop.text "link" ]
+            Html.a [ prop.href "/create-wahl"; prop.text "create Wahl" ]
         ]
     ]
