@@ -7,10 +7,16 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="paket.references" />
+    <Compile Include="Db.fs" />
+    <Compile Include="KandidatLogic.fs" />
+    <Compile Include="WaehlerLogic.fs" />
     <Compile Include="Server.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="LiteDB" Version="5.0.21" />
   </ItemGroup>
   <PropertyGroup>
     <WarningsAsErrors>0025</WarningsAsErrors>

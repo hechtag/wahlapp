@@ -4,6 +4,10 @@ open SAFE
 open Saturn
 open Shared
 open System
+open Db
+open Microsoft.Extensions.Logging
+open Microsoft.AspNetCore.Http
+open Giraffe
 
 module Storage =
     let waehlers = ResizeArray [ Waehler.create "Jannis"; Waehler.create "Muri" ]
@@ -28,24 +32,15 @@ module Storage =
         else
             Error "Invalid waehler"
 
-let api ctx = {
-    getWaehlers = fun () -> async { return Storage.waehlers |> List.ofSeq }
-    addWaehler =
-        fun todo -> async {
-            return
-                match Storage.addWaehler todo with
-                | Ok() -> todo
-                | Error e -> failwith e
-        }
 
-    getKandidaten = fun () -> async { return Storage.kandidaten |> List.ofSeq }
-    addKandidat =
-        fun todo -> async {
-            return
-                match Storage.addKandidat todo with
-                | Ok() -> todo
-                | Error e -> failwith e
-        }
+
+// Your API logic here
+let api (ctx: HttpContext) = {
+    getWaehlers = WaehlerLogic.getWaehlers
+
+    addWaehler = WaehlerLogic.addWaehler
+    getKandidaten = KandidatLogic.getKandidaten
+    addKandidat = KandidatLogic.addKandidat
     createWahl =
         fun wahl -> async {
             return
@@ -63,6 +58,7 @@ let app = application {
     memory_cache
     use_static "public"
     use_gzip
+    logging (fun logger -> logger.SetMinimumLevel LogLevel.Debug |> ignore)
 }
 
 [<EntryPoint>]
