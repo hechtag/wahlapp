@@ -10,4 +10,6 @@ type Model = { id: string }
 
 type Msg = None
 let init what = { id = "" }, Cmd.none
+
+let update msg model = model, Cmd.none
 let view model dispatch = Html.div [ prop.text "create Wahl" ]

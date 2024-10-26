@@ -7,10 +7,14 @@ open Feliz.Router
 type Url =
     | Home
     | CreateWahl
+    | CreateWaehler
+    | CreateKandidat
 
 type Page =
     | Home of Home.Model
     | CreateWahl of CreateWahl.Model
+    | CreateWaehler of CreateWaehler.Model
+    | CreateKandidat of CreateKandidat.Model
     | NotFound
 
 
@@ -22,6 +26,8 @@ type Model = {
 type Msg =
     | HomeMsg of Home.Msg
     | CreateWahlMsg of CreateWahl.Msg
+    | CreateWaehlerMsg of CreateWaehler.Msg
+    | CreateKandidatMsg of CreateKandidat.Msg
     | UrlChanged of Url option
 
 
@@ -30,6 +36,8 @@ let tryParseUrl =
     | []
     | [ "home" ] -> Some Url.Home
     | [ "create-wahl" ] -> Some Url.CreateWahl
+    | [ "create-waehler" ] -> Some Url.CreateWaehler
+    | [ "create-kandidat" ] -> Some Url.CreateKandidat
     | _ -> None
 
 
@@ -51,6 +59,22 @@ let initPage url =
             CurrentPage = (Page.CreateWahl model)
         },
         msg |> Cmd.map CreateWahlMsg
+    | Some Url.CreateWaehler ->
+        let model, msg = CreateWaehler.init ()
+
+        {
+            CurrentUrl = url
+            CurrentPage = (Page.CreateWaehler model)
+        },
+        msg |> Cmd.map CreateWaehlerMsg
+    | Some Url.CreateKandidat ->
+        let model, msg = CreateKandidat.init ()
+
+        {
+            CurrentUrl = url
+            CurrentPage = (Page.CreateKandidat model)
+        },
+        msg |> Cmd.map CreateKandidatMsg
     | None ->
         {
             CurrentUrl = url
@@ -63,29 +87,62 @@ let init () : Model * Cmd<Msg> =
     Router.currentPath () |> tryParseUrl |> initPage
 
 
-let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
-    match msg, model.CurrentPage with
-    | HomeMsg page1Msg, Page.Home page1Model ->
-        let newPage1Model, newPage1Msg = Home.update page1Msg page1Model
+let update (message: Msg) (model: Model) : Model * Cmd<Msg> =
+    match message, model.CurrentPage with
+    | HomeMsg msg, Page.Home pageModel ->
+        let newPageModel, newPageMsg = Home.update msg pageModel
 
         {
             model with
-                CurrentPage = Page.Home newPage1Model
+                CurrentPage = Page.Home newPageModel
         },
-        newPage1Msg |> Cmd.map HomeMsg
+        newPageMsg |> Cmd.map HomeMsg
+    | HomeMsg _, _ -> model, Cmd.none
+    | CreateWaehlerMsg msg, Page.CreateWaehler pageModel ->
+        let newPageModel, newPageMsg = CreateWaehler.update msg pageModel
+
+        {
+            model with
+                CurrentPage = Page.CreateWaehler newPageModel
+        },
+        newPageMsg |> Cmd.map CreateWaehlerMsg
+    | CreateWaehlerMsg _, _ -> model, Cmd.none
+    | CreateKandidatMsg msg, Page.CreateKandidat pageModel ->
+        let newPageModel, newPageMsg = CreateKandidat.update msg pageModel
+
+        {
+            model with
+                CurrentPage = Page.CreateKandidat newPageModel
+        },
+        newPageMsg |> Cmd.map CreateKandidatMsg
+    | CreateKandidatMsg _, _ -> model, Cmd.none
+    | CreateWahlMsg msg, Page.CreateWahl pageModel ->
+        let newPageModel, newPageMsg = CreateWahl.update msg pageModel
+
+        {
+            model with
+                CurrentPage = Page.CreateWahl newPageModel
+        },
+        newPageMsg |> Cmd.map CreateWahlMsg
+    | CreateWahlMsg _, _ -> model, Cmd.none
     | UrlChanged urlSegments, _ -> initPage urlSegments
-    | _ -> model, Cmd.none
 
 
 
 let view (model: Model) (dispatch: Msg -> unit) =
-    React.router [
-        router.pathMode
-        router.onUrlChanged (tryParseUrl >> UrlChanged >> dispatch)
-        router.children [
-            match model.CurrentPage with
-            | Page.Home homeModel -> Home.view homeModel (HomeMsg >> dispatch)
-            | Page.CreateWahl wahlModel -> CreateWahl.view wahlModel (CreateWahlMsg >> dispatch)
-            | Page.NotFound -> Html.p "Not found"
-        ]
+    Html.div [
+        prop.children[Nav.view
+
+                      React.router [
+                          router.pathMode
+                          router.onUrlChanged (tryParseUrl >> UrlChanged >> dispatch)
+                          router.children [
+                              match model.CurrentPage with
+                              | Page.Home homeModel -> Home.view homeModel (HomeMsg >> dispatch)
+                              | Page.CreateWahl m -> CreateWahl.view m (CreateWahlMsg >> dispatch)
+                              | Page.CreateWaehler m -> CreateWaehler.view m (CreateWaehlerMsg >> dispatch)
+                              | Page.CreateKandidat m -> CreateKandidat.view m (CreateKandidatMsg >> dispatch)
+                              | Page.NotFound -> Html.p "Not found"
+                          ]
+                      ]]
     ]
