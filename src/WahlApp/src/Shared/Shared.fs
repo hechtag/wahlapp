@@ -20,10 +20,10 @@ type Kandidat = { Id: Guid; Name: string }
 module Kandidat =
     let create (name: string) = { Id = Guid.NewGuid(); Name = name }
 
-type Wahl = { Id: Guid; Name: string }
+type KandidatenAgg = { Id: Guid; Name: string; Anzahl: int }
+type Auswertung = { Kandidaten: KandidatenAgg list }
 
-module Wahl =
-    let create (name: string) = { Id = Guid.NewGuid(); Name = name }
+
 
 type IApi = {
     getKandidaten: unit -> Async<Kandidat list>
@@ -34,6 +34,6 @@ type IApi = {
     addWaehler: Waehler -> Async<Waehler>
     deleteWaehler: Guid -> Async<Waehler list>
 
-    createWahl: Wahl -> Async<Wahl>
     waehlen: Guid * Guid -> Async<Waehler list>
+    getAuswertung: unit -> Async<Auswertung>
 }

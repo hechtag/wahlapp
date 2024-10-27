@@ -10,19 +10,21 @@ open System
 type Model = {
     Waehler: RemoteData<Waehler list>
     Kandidaten: RemoteData<Kandidat list>
+    Auswertung: RemoteData<Auswertung>
 }
 
 
 
 type Msg =
-    | LoadData of ApiCall<unit, Waehler list * Kandidat list>
-    | Waehlen of ApiCall<Guid * Guid, Waehler list>
+    | LoadData of ApiCall<unit, Waehler list * Kandidat list * Auswertung>
+    | Waehlen of ApiCall<Guid * Guid, Waehler list * Auswertung>
 
 
 let init () =
     let initialModel = {
         Waehler = NotStarted
         Kandidaten = NotStarted
+        Auswertung = NotStarted
     }
 
     let initialCmd = LoadData(Start()) |> Cmd.ofMsg
@@ -32,40 +34,56 @@ let init () =
 
 let api = Api.makeProxy<IApi> ()
 
+let refreshPage () = async {
+    let! waehler = api.getWaehlers ()
+    let! kandidaten = api.getKandidaten ()
+    let! auswertung = api.getAuswertung ()
+    return waehler, kandidaten, auswertung
+}
+
 let update msg model =
     match msg with
     | LoadData msg ->
         match msg with
         | Start() ->
-            let tasks () = async {
-                let! waehler = api.getWaehlers ()
-                let! kandidaten = api.getKandidaten ()
-                return waehler, kandidaten
-            }
 
-            let cmd = Cmd.OfAsync.perform tasks () (Finished >> LoadData)
+            let cmd = Cmd.OfAsync.perform refreshPage () (Finished >> LoadData)
 
             {
                 model with
                     Waehler = Loading
                     Kandidaten = Loading
+                    Auswertung = Loading
             },
             cmd
-        | Finished(waehler, kandidaten) ->
+        | Finished(waehler, kandidaten, auswertung) ->
             {
                 model with
                     Waehler = Loaded waehler
                     Kandidaten = Loaded kandidaten
+                    Auswertung = Loaded auswertung
             },
             Cmd.none
     | Waehlen msg ->
         match msg with
         | Start(kandidatId, waehlerId) ->
-            let cmd =
-                Cmd.OfAsync.perform api.waehlen (kandidatId, waehlerId) (Finished >> Waehlen)
+
+            let tasks () = async {
+                let! waehlerList = api.waehlen (kandidatId, waehlerId)
+                let! auswertung = api.getAuswertung ()
+                return waehlerList, auswertung
+            }
+
+            let cmd = Cmd.OfAsync.perform tasks () (Finished >> Waehlen)
 
             { model with Waehler = Loading }, cmd
-        | Finished(waehler) -> { model with Waehler = Loaded waehler }, Cmd.none
+        | Finished(waehler, auswertung) ->
+            {
+                model with
+                    Waehler = Loaded waehler
+                    Auswertung = Loaded auswertung
+            },
+            Cmd.none
 
 let get (kandidatenList: Kandidat list) (kandidatId: Guid option) : string =
     kandidatId
@@ -113,9 +131,9 @@ module ViewComponents =
                                                       ]
                                                   ]]
                                 ]
-                        | NotStarted, _ -> Html.text "Not Started."
+                        | NotStarted, _
                         | _, NotStarted -> Html.text "Not Started."
-                        | Loading, _ -> Html.text "Loading..."
+                        | Loading, _
                         | _, Loading -> Html.text "Loading..."
                     ]
                 ]
@@ -141,8 +159,38 @@ module ViewComponents =
             ]
         ]
 
+    let auswertung model dispatch =
+        Html.div [
+            prop.className "bg-white/80 rounded-md shadow-md p-4 w-5/6 lg:w-3/4 lg:max-w-2xl"
+            prop.children [
+                Html.h1 [ prop.text "Wähler" ]
+                Html.ol [
+                    prop.className "list-decimal ml-6"
+                    prop.children [
+                        match model.Auswertung with
+                        | Loaded auswertung ->
+                            for kandidat in auswertung.Kandidaten do
+                                Html.li [
+                                    prop.style [
+                                        style.display.flex
+                                        style.justifyContent.spaceBetween
+                                        style.gap 10
+                                        style.alignItems.baseline
+                                    ]
+                                    prop.className "my-1"
+                                    prop.children[Html.div[prop.text kandidat.Name]
+                                                  Html.div [ prop.text (kandidat.Anzahl.ToString()) ]]
+                                ]
+                        | NotStarted -> Html.text "Not Started."
+                        | Loading -> Html.text "Loading..."
+                    ]
+                ]
+            ]
+        ]
+
 let view model dispatch =
     Html.div [
         prop.children[ViewComponents.waehlerList model dispatch
-                      ViewComponents.kandidatenList model dispatch]
+                      ViewComponents.kandidatenList model dispatch
+                      ViewComponents.auswertung model dispatch]
     ]

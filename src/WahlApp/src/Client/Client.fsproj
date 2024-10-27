@@ -10,7 +10,6 @@
     <None Include="tailwind.config.js" />
     <None Include="index.html" />
     <None Include="paket.references" />
-    <Compile Include="Home.fs" />
     <Compile Include="CreateKandidat.fs" />
     <Compile Include="CreateWaehler.fs" />
     <Compile Include="CreateWahl.fs" />

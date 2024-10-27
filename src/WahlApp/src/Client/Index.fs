@@ -5,13 +5,11 @@ open Feliz
 open Feliz.Router
 
 type Url =
-    | Home
     | CreateWahl
     | CreateWaehler
     | CreateKandidat
 
 type Page =
-    | Home of Home.Model
     | CreateWahl of CreateWahl.Model
     | CreateWaehler of CreateWaehler.Model
     | CreateKandidat of CreateKandidat.Model
@@ -24,7 +22,6 @@ type Model = {
 }
 
 type Msg =
-    | HomeMsg of Home.Msg
     | CreateWahlMsg of CreateWahl.Msg
     | CreateWaehlerMsg of CreateWaehler.Msg
     | CreateKandidatMsg of CreateKandidat.Msg
@@ -34,7 +31,6 @@ type Msg =
 let tryParseUrl =
     function
     | []
-    | [ "home" ] -> Some Url.Home
     | [ "create-wahl" ] -> Some Url.CreateWahl
     | [ "create-waehler" ] -> Some Url.CreateWaehler
     | [ "create-kandidat" ] -> Some Url.CreateKandidat
@@ -43,14 +39,6 @@ let tryParseUrl =
 
 let initPage url =
     match url with
-    | Some Url.Home ->
-        let model, msg = Home.init ()
-
-        {
-            CurrentUrl = url
-            CurrentPage = (Page.Home model)
-        },
-        msg |> Cmd.map HomeMsg
     | Some Url.CreateWahl ->
         let model, msg = CreateWahl.init ()
 
@@ -89,15 +77,6 @@ let init () : Model * Cmd<Msg> =
 
 let update (message: Msg) (model: Model) : Model * Cmd<Msg> =
     match message, model.CurrentPage with
-    | HomeMsg msg, Page.Home pageModel ->
-        let newPageModel, newPageMsg = Home.update msg pageModel
-
-        {
-            model with
-                CurrentPage = Page.Home newPageModel
-        },
-        newPageMsg |> Cmd.map HomeMsg
-    | HomeMsg _, _ -> model, Cmd.none
     | CreateWaehlerMsg msg, Page.CreateWaehler pageModel ->
         let newPageModel, newPageMsg = CreateWaehler.update msg pageModel
 
@@ -138,7 +117,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
                           router.onUrlChanged (tryParseUrl >> UrlChanged >> dispatch)
                           router.children [
                               match model.CurrentPage with
-                              | Page.Home homeModel -> Home.view homeModel (HomeMsg >> dispatch)
                               | Page.CreateWahl m -> CreateWahl.view m (CreateWahlMsg >> dispatch)
                               | Page.CreateWaehler m -> CreateWaehler.view m (CreateWaehlerMsg >> dispatch)
                               | Page.CreateKandidat m -> CreateKandidat.view m (CreateKandidatMsg >> dispatch)

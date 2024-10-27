@@ -9,31 +9,6 @@ open Microsoft.Extensions.Logging
 open Microsoft.AspNetCore.Http
 open Giraffe
 
-module Storage =
-    let waehlers = ResizeArray [ Waehler.create "Jannis"; Waehler.create "Muri" ]
-    let kandidaten = ResizeArray [ Kandidat.create "Jannis"; Kandidat.create "Muri" ]
-    let mutable currentWahl = None
-
-    let setWahl wahl =
-        currentWahl <- Some wahl
-        Ok()
-
-    let addKandidat (kandidat: Kandidat) =
-        if String.IsNullOrWhiteSpace kandidat.Name |> not then
-            kandidaten.Add kandidat
-            Ok()
-        else
-            Error "Invalid waehler"
-
-    let addWaehler (waehler: Waehler) =
-        if String.IsNullOrWhiteSpace waehler.Name |> not then
-            waehlers.Add waehler
-            Ok()
-        else
-            Error "Invalid waehler"
-
-
-
 // Your API logic here
 let api (ctx: HttpContext) = {
     getWaehlers = WaehlerLogic.getWaehlers
@@ -44,15 +19,8 @@ let api (ctx: HttpContext) = {
     addKandidat = KandidatLogic.addKandidat
     deleteKandidat = KandidatLogic.deleteKandidat
 
-    createWahl =
-        fun wahl -> async {
-            return
-                match Storage.setWahl wahl with
-                | Ok() -> wahl
-                | Error e -> failwith e
-
-        }
     waehlen = WahlLogic.waehlen
+    getAuswertung = WahlLogic.getAuswertung
 }
 
 let webApp = Api.make api
