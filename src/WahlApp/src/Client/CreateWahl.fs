@@ -94,16 +94,21 @@ module ViewComponents =
                                     ]
                                     prop.className "my-1"
                                     prop.children[Html.div[prop.text waehler.Name]
-                                                  Html.div[prop.text (get kandidatenList waehler.KandidatId)]
 
                                                   Html.select [
                                                       prop.onChange (fun (r: string) ->
                                                           dispatch (Waehlen(Start(Guid.Parse(r), waehler.Id))))
                                                       prop.children [
+                                                          Html.option [ prop.text "nix"; prop.value (None.ToString()) ]
                                                           for kandidat in kandidatenList do
                                                               Html.option [
                                                                   prop.text kandidat.Name
                                                                   prop.value kandidat.Id
+                                                                  prop.selected (
+                                                                      waehler.KandidatId
+                                                                      |> Option.map (fun kId -> kandidat.Id = kId)
+                                                                      |> Option.defaultValue false
+                                                                  )
                                                               ]
                                                       ]
                                                   ]]
