@@ -8,8 +8,9 @@
   <ItemGroup>
     <None Include="paket.references" />
     <Compile Include="Db.fs" />
-    <Compile Include="KandidatLogic.fs" />
     <Compile Include="WaehlerLogic.fs" />
+    <Compile Include="WahlLogic.fs" />
+    <Compile Include="KandidatLogic.fs" />
     <Compile Include="Server.fs" />
   </ItemGroup>
   <ItemGroup>

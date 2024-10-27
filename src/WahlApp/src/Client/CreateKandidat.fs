@@ -15,6 +15,7 @@ type Msg =
     | LoadData of ApiCall<unit, Kandidat list>
     | SetInputKandidat of string
     | SaveKandidat of ApiCall<string, Kandidat>
+    | DeleteKandidat of ApiCall<Guid, Kandidat list>
 
 let api = Api.makeProxy<IApi> ()
 
@@ -46,16 +47,28 @@ let update message model =
             Cmd.none
     | SaveKandidat msg ->
         match msg with
-        | Start todoText ->
-            let saveTodoCmd =
-                let todo = Kandidat.create todoText
-                Cmd.OfAsync.perform api.addKandidat todo (Finished >> SaveKandidat)
+        | Start text ->
+            let cmd =
+                let kandidat = Kandidat.create text
+                Cmd.OfAsync.perform api.addKandidat kandidat (Finished >> SaveKandidat)
 
-            { model with KandidatInput = "" }, saveTodoCmd
-        | Finished todo ->
+            { model with KandidatInput = "" }, cmd
+        | Finished kandidat ->
             {
                 model with
-                    Kandidaten = model.Kandidaten |> RemoteData.map (fun todos -> todos @ [ todo ])
+                    Kandidaten = model.Kandidaten |> RemoteData.map (fun kandidaten -> kandidaten @ [ kandidat ])
+            },
+            Cmd.none
+    | DeleteKandidat msg ->
+        match msg with
+        | Start id ->
+            let cmd = Cmd.OfAsync.perform api.deleteKandidat id (Finished >> DeleteKandidat)
+
+            { model with Kandidaten = Loading }, cmd
+        | Finished kandidaten ->
+            {
+                model with
+                    Kandidaten = Loaded kandidaten
             },
             Cmd.none
 
@@ -96,9 +109,28 @@ module ViewComponents =
                         match model.Kandidaten with
                         | NotStarted -> Html.text "Not Started."
                         | Loading -> Html.text "Loading..."
-                        | Loaded todos ->
-                            for todo in todos do
-                                Html.li [ prop.className "my-1"; prop.text todo.Name ]
+                        | Loaded kandidaten ->
+                            for kandidat in kandidaten do
+                                Html.li [
+                                    prop.style [
+                                        style.display.flex
+                                        style.justifyContent.spaceBetween
+                                        style.gap 10
+                                        style.alignItems.baseline
+                                    ]
+                                    prop.className "my-1"
+                                    prop.children[Html.div[prop.text kandidat.Name]
+
+                                                  Html.button[prop.className
+                                                                  "flex-no-shrink p-2 px-12 rounded bg-teal-600 outline-none focus:ring-2 ring-teal-300 font-bold text-white hover:bg-teal disabled:opacity-30 disabled:cursor-not-allowed"
+
+
+
+                                                              prop.onClick (fun _ ->
+                                                                  dispatch (DeleteKandidat(Start kandidat.Id)))
+
+                                                              prop.text "Delete"]]
+                                ]
                     ]
                 ]
 

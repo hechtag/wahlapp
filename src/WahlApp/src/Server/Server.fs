@@ -37,10 +37,13 @@ module Storage =
 // Your API logic here
 let api (ctx: HttpContext) = {
     getWaehlers = WaehlerLogic.getWaehlers
-
     addWaehler = WaehlerLogic.addWaehler
+    deleteWaehler = WaehlerLogic.deleteWaehler
+
     getKandidaten = KandidatLogic.getKandidaten
     addKandidat = KandidatLogic.addKandidat
+    deleteKandidat = KandidatLogic.deleteKandidat
+
     createWahl =
         fun wahl -> async {
             return
@@ -49,6 +52,7 @@ let api (ctx: HttpContext) = {
                 | Error e -> failwith e
 
         }
+    waehlen = WahlLogic.waehlen
 }
 
 let webApp = Api.make api

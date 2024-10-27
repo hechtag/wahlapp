@@ -18,6 +18,11 @@ let find (collectionName: string) (f: 'T -> bool) : 'T seq =
     let asdf = db.GetCollection<'T>(collectionName).Find(f) |> Seq.toList
     asdf
 
+let getById (collectionName: string) (id: Guid) : 'T =
+    use db = new LiteDatabase(dbName)
+    let asdf = db.GetCollection<'T>(collectionName).FindById(id)
+    asdf
+
 let add<'T> (collectionName: string) (item: 'T) : Result<'T, string> =
     use db = new LiteDatabase(dbName)
     let asdf = db.GetCollection<'T>(collectionName).Insert(item)
@@ -25,7 +30,15 @@ let add<'T> (collectionName: string) (item: 'T) : Result<'T, string> =
     Ok item
 
 
+let delete<'T> (collectionName: string) (id: Guid) : unit =
+    use db = new LiteDatabase(dbName)
+    let asdf = db.GetCollection<'T>(collectionName).Delete(id)
+    ()
 
+let update (collectionName: string) (toUpdate: 'T) : unit =
+    use db = new LiteDatabase(dbName)
+    let asdf = db.GetCollection<'T>(collectionName).Update(toUpdate)
+    ()
 
 
 // let test = Test()

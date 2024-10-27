@@ -17,6 +17,7 @@ type Msg =
     | SetInputWaehler of string
     | SaveWaehler of ApiCall<string, Waehler>
     | LoadData of ApiCall<unit, Waehler list>
+    | DeleteWaehler of ApiCall<Guid, Waehler list>
 
 let api = Api.makeProxy<IApi> ()
 
@@ -42,18 +43,24 @@ let update msg model =
         | Finished(waehler) -> { model with Waehler = Loaded waehler }, Cmd.none
     | SaveWaehler msg ->
         match msg with
-        | Start todoText ->
-            let saveTodoCmd =
-                let todo = Waehler.create todoText
-                Cmd.OfAsync.perform api.addWaehler todo (Finished >> SaveWaehler)
+        | Start text ->
+            let cmd =
+                let waehler = Waehler.create text
+                Cmd.OfAsync.perform api.addWaehler waehler (Finished >> SaveWaehler)
 
-            { model with WaehlerInput = "" }, saveTodoCmd
-        | Finished todo ->
+            { model with WaehlerInput = "" }, cmd
+        | Finished waehler ->
             {
                 model with
-                    Waehler = model.Waehler |> RemoteData.map (fun todos -> todos @ [ todo ])
+                    Waehler = model.Waehler |> RemoteData.map (fun waehlerList -> waehlerList @ [ waehler ])
             },
             Cmd.none
+    | DeleteWaehler msg ->
+        match msg with
+        | Start id ->
+            let cmd = Cmd.OfAsync.perform api.deleteWaehler id (Finished >> DeleteWaehler)
+            { model with Waehler = Loading }, cmd
+        | Finished list -> { model with Waehler = Loaded list }, Cmd.none
 
 module ViewComponents =
     let waehlerAction model dispatch =
@@ -91,9 +98,28 @@ module ViewComponents =
                         match model.Waehler with
                         | NotStarted -> Html.text "Not Started."
                         | Loading -> Html.text "Loading..."
-                        | Loaded todos ->
-                            for todo in todos do
-                                Html.li [ prop.className "my-1"; prop.text todo.Name ]
+                        | Loaded waehlerList ->
+                            for waehler in waehlerList do
+                                Html.li [
+                                    prop.style [
+                                        style.display.flex
+                                        style.justifyContent.spaceBetween
+                                        style.gap 10
+                                        style.alignItems.baseline
+                                    ]
+                                    prop.className "my-1"
+                                    prop.children[Html.div[prop.text waehler.Name]
+
+                                                  Html.button[prop.className
+                                                                  "flex-no-shrink p-2 px-12 rounded bg-teal-600 outline-none focus:ring-2 ring-teal-300 font-bold text-white hover:bg-teal disabled:opacity-30 disabled:cursor-not-allowed"
+
+
+
+                                                              prop.onClick (fun _ ->
+                                                                  dispatch (DeleteWaehler(Start waehler.Id)))
+
+                                                              prop.text "Delete"]]
+                                ]
                     ]
                 ]
 

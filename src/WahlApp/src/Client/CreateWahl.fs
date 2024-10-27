@@ -4,6 +4,7 @@ open Feliz
 open Elmish
 open SAFE
 open Shared
+open System
 
 
 type Model = {
@@ -13,7 +14,9 @@ type Model = {
 
 
 
-type Msg = LoadData of ApiCall<unit, Waehler list * Kandidat list>
+type Msg =
+    | LoadData of ApiCall<unit, Waehler list * Kandidat list>
+    | Waehlen of ApiCall<Guid * Guid, Waehler list>
 
 
 let init () =
@@ -55,6 +58,20 @@ let update msg model =
                     Kandidaten = Loaded kandidaten
             },
             Cmd.none
+    | Waehlen msg ->
+        match msg with
+        | Start(kandidatId, waehlerId) ->
+            let cmd =
+                Cmd.OfAsync.perform api.waehlen (kandidatId, waehlerId) (Finished >> Waehlen)
+
+            { model with Waehler = Loading }, cmd
+        | Finished(waehler) -> { model with Waehler = Loaded waehler }, Cmd.none
+
+let get (kandidatenList: Kandidat list) (kandidatId: Guid option) : string =
+    kandidatId
+    |> Option.bind (fun id -> kandidatenList |> List.tryFind (fun k -> k.Id = id))
+    |> Option.map _.Name
+    |> Option.defaultValue "nix"
 
 module ViewComponents =
     let waehlerList model dispatch =
@@ -65,12 +82,36 @@ module ViewComponents =
                 Html.ol [
                     prop.className "list-decimal ml-6"
                     prop.children [
-                        match model.Waehler with
-                        | NotStarted -> Html.text "Not Started."
-                        | Loading -> Html.text "Loading..."
-                        | Loaded todos ->
-                            for todo in todos do
-                                Html.li [ prop.className "my-1"; prop.text todo.Name ]
+                        match model.Waehler, model.Kandidaten with
+                        | Loaded waehlerList, Loaded kandidatenList ->
+                            for waehler in waehlerList do
+                                Html.li [
+                                    prop.style [
+                                        style.display.flex
+                                        style.justifyContent.spaceBetween
+                                        style.gap 10
+                                        style.alignItems.baseline
+                                    ]
+                                    prop.className "my-1"
+                                    prop.children[Html.div[prop.text waehler.Name]
+                                                  Html.div[prop.text (get kandidatenList waehler.KandidatId)]
+
+                                                  Html.select [
+                                                      prop.onChange (fun (r: string) ->
+                                                          dispatch (Waehlen(Start(Guid.Parse(r), waehler.Id))))
+                                                      prop.children [
+                                                          for kandidat in kandidatenList do
+                                                              Html.option [
+                                                                  prop.text kandidat.Name
+                                                                  prop.value kandidat.Id
+                                                              ]
+                                                      ]
+                                                  ]]
+                                ]
+                        | NotStarted, _ -> Html.text "Not Started."
+                        | _, NotStarted -> Html.text "Not Started."
+                        | Loading, _ -> Html.text "Loading..."
+                        | _, Loading -> Html.text "Loading..."
                     ]
                 ]
             ]
@@ -87,9 +128,9 @@ module ViewComponents =
                         match model.Kandidaten with
                         | NotStarted -> Html.text "Not Started."
                         | Loading -> Html.text "Loading..."
-                        | Loaded todos ->
-                            for todo in todos do
-                                Html.li [ prop.className "my-1"; prop.text todo.Name ]
+                        | Loaded kandidaten ->
+                            for kandidat in kandidaten do
+                                Html.li [ prop.className "my-1"; prop.text kandidat.Name ]
                     ]
                 ]
             ]

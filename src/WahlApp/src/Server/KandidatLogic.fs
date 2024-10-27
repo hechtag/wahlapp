@@ -10,4 +10,10 @@ let addKandidat kandidat = async {
         match Db.add<Kandidat> colName kandidat with
         | Ok w -> w
         | Error e -> failwith e
+
+}
+
+let deleteKandidat id : Async<Kandidat list> = async {
+    do Db.delete<Kandidat> colName id
+    return! getKandidaten ()
 }
