@@ -18,3 +18,7 @@ release.sh
 *.orig
 *.fsproj.user
 *.DotSettings.user
+
+
+# custom
+wahlapp.db
