@@ -3,8 +3,10 @@ module CreateKandidat
 open Feliz
 open Elmish
 open SAFE
-open Shared
+open Entity
 open System
+open Api
+open Dto
 
 type Model = {
     Kandidaten: RemoteData<Kandidat list>
@@ -12,10 +14,10 @@ type Model = {
 }
 
 type Msg =
-    | LoadData of ApiCall<unit, Kandidat list>
+    | LoadData of ApiCall<unit, KandidatDto list>
     | SetInputKandidat of string
-    | SaveKandidat of ApiCall<string, Kandidat>
-    | DeleteKandidat of ApiCall<Guid, Kandidat list>
+    | SaveKandidat of ApiCall<string, KandidatDto>
+    | DeleteKandidat of ApiCall<Guid, KandidatDto list>
 
 let api = Api.makeProxy<IApi> ()
 
@@ -42,7 +44,7 @@ let update message model =
         | Finished(kandidaten) ->
             {
                 model with
-                    Kandidaten = Loaded kandidaten
+                    Kandidaten = Loaded(kandidaten |> List.map Dto.ToKandidat)
             },
             Cmd.none
     | SaveKandidat msg ->
@@ -50,25 +52,28 @@ let update message model =
         | Start text ->
             let cmd =
                 let kandidat = Kandidat.create text
-                Cmd.OfAsync.perform api.addKandidat kandidat (Finished >> SaveKandidat)
+                Cmd.OfAsync.perform api.addKandidat (kandidat |> Dto.FromKandidat) (Finished >> SaveKandidat)
 
             { model with KandidatInput = "" }, cmd
         | Finished kandidat ->
             {
                 model with
-                    Kandidaten = model.Kandidaten |> RemoteData.map (fun kandidaten -> kandidaten @ [ kandidat ])
+                    Kandidaten =
+                        model.Kandidaten
+                        |> RemoteData.map (fun kandidaten -> kandidaten @ [ kandidat |> Dto.ToKandidat ])
             },
             Cmd.none
     | DeleteKandidat msg ->
         match msg with
         | Start id ->
-            let cmd = Cmd.OfAsync.perform api.deleteKandidat id (Finished >> DeleteKandidat)
+            let cmd =
+                Cmd.OfAsync.perform api.deleteKandidat (id |> Kandidat.KC) (Finished >> DeleteKandidat)
 
             { model with Kandidaten = Loading }, cmd
         | Finished kandidaten ->
             {
                 model with
-                    Kandidaten = Loaded kandidaten
+                    Kandidaten = Loaded(kandidaten |> List.map Dto.ToKandidat)
             },
             Cmd.none
 
@@ -127,7 +132,12 @@ module ViewComponents =
 
 
                                                               prop.onClick (fun _ ->
-                                                                  dispatch (DeleteKandidat(Start kandidat.Id)))
+                                                                  dispatch (
+                                                                      kandidat.Id
+                                                                      |> Kandidat.Ka
+                                                                      |> Start
+                                                                      |> DeleteKandidat
+                                                                  ))
 
                                                               prop.text "Delete"]]
                                 ]

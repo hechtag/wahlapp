@@ -5,6 +5,7 @@
     <DefineConstants>FABLE_COMPILER</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="HtmlU.fs" />
     <Compile Include="Nav.fs" />
     <None Include="postcss.config.js" />
     <None Include="tailwind.config.js" />

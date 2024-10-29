@@ -4,7 +4,10 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Shared.fs" />
+    <Compile Include="Entity.fs" />
+    <Compile Include="Dto.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="Api.fs" />
     <Content Include="paket.references" />
   </ItemGroup>
   <PropertyGroup>

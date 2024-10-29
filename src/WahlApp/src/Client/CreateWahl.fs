@@ -3,8 +3,10 @@ module CreateWahl
 open Feliz
 open Elmish
 open SAFE
-open Shared
+open Entity
 open System
+open Api
+open Dto
 
 
 type Model = {
@@ -16,8 +18,9 @@ type Model = {
 
 
 type Msg =
-    | LoadData of ApiCall<unit, Waehler list * Kandidat list * Auswertung>
-    | Waehlen of ApiCall<Guid * Guid, Waehler list * Auswertung>
+    | LoadData of ApiCall<unit, Waehler list * KandidatDto list * Auswertung>
+    | Waehlen of ApiCall<KandidatId * WaehlerId, Waehler list * Auswertung>
+    | Verteilen of ApiCall<WaehlerId * WaehlerId, Waehler list * Auswertung>
 
 
 let init () =
@@ -60,7 +63,7 @@ let update msg model =
             {
                 model with
                     Waehler = Loaded waehler
-                    Kandidaten = Loaded kandidaten
+                    Kandidaten = Loaded(kandidaten |> List.map Dto.ToKandidat)
                     Auswertung = Loaded auswertung
             },
             Cmd.none
@@ -84,8 +87,28 @@ let update msg model =
                     Auswertung = Loaded auswertung
             },
             Cmd.none
+    | Verteilen msg ->
+        match msg with
+        | Start(verteilerId, waehlerId) ->
 
-let get (kandidatenList: Kandidat list) (kandidatId: Guid option) : string =
+            let tasks () = async {
+                let! waehlerList = api.verteilen (verteilerId, waehlerId)
+                let! auswertung = api.getAuswertung ()
+                return waehlerList, auswertung
+            }
+
+            let cmd = Cmd.OfAsync.perform tasks () (Finished >> Waehlen)
+
+            { model with Waehler = Loading }, cmd
+        | Finished(waehler, auswertung) ->
+            {
+                model with
+                    Waehler = Loaded waehler
+                    Auswertung = Loaded auswertung
+            },
+            Cmd.none
+
+let get (kandidatenList: Kandidat list) (kandidatId: KandidatId option) : string =
     kandidatId
     |> Option.bind (fun id -> kandidatenList |> List.tryFind (fun k -> k.Id = id))
     |> Option.map _.Name
@@ -115,17 +138,37 @@ module ViewComponents =
 
                                                   Html.select [
                                                       prop.onChange (fun (r: string) ->
-                                                          dispatch (Waehlen(Start(Guid.Parse(r), waehler.Id))))
+                                                          dispatch (Waehlen(Start(Kandidat.parse r, waehler.Id))))
                                                       prop.children [
                                                           Html.option [ prop.text "nix"; prop.value (None.ToString()) ]
                                                           for kandidat in kandidatenList do
                                                               Html.option [
                                                                   prop.text kandidat.Name
-                                                                  prop.value kandidat.Id
+                                                                  prop.value (kandidat.Id |> Kandidat.Ka)
                                                                   prop.selected (
                                                                       waehler.KandidatId
                                                                       |> Option.map (fun kId -> kandidat.Id = kId)
                                                                       |> Option.defaultValue false
+                                                                  )
+                                                              ]
+                                                      ]
+                                                  ]
+
+                                                  Html.select [
+                                                      prop.onChange (fun (r: string) ->
+                                                          dispatch (Verteilen(Start(Waehler.parse r, waehler.Id))))
+                                                      prop.children [
+                                                          Html.option [ prop.text "nix"; prop.value (None.ToString()) ]
+                                                          for wa in
+                                                              waehlerList |> List.filter (fun w -> w.Id <> waehler.Id) do
+                                                              Html.option [
+                                                                  prop.text wa.Name
+                                                                  prop.value (wa.Id |> Waehler.Wa)
+                                                                  prop.selected (
+                                                                      waehler.VerteilerId
+                                                                      |> Utils.mapAndDefault
+                                                                          (fun vId -> wa.Id = vId)
+                                                                          false
                                                                   )
                                                               ]
                                                       ]
@@ -178,7 +221,7 @@ module ViewComponents =
                                         style.alignItems.baseline
                                     ]
                                     prop.className "my-1"
-                                    prop.children[Html.div[prop.text kandidat.Name]
+                                    prop.children[Html.div[prop.text "name"]
                                                   Html.div [ prop.text (kandidat.Anzahl.ToString()) ]]
                                 ]
                         | NotStarted -> Html.text "Not Started."

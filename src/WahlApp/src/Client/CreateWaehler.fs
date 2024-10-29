@@ -3,8 +3,9 @@ module CreateWaehler
 open Feliz
 open Elmish
 open SAFE
-open Shared
+open Entity
 open System
+open Api
 
 type Model = {
     Waehler: RemoteData<Waehler list>
@@ -17,7 +18,7 @@ type Msg =
     | SetInputWaehler of string
     | SaveWaehler of ApiCall<string, Waehler>
     | LoadData of ApiCall<unit, Waehler list>
-    | DeleteWaehler of ApiCall<Guid, Waehler list>
+    | DeleteWaehler of ApiCall<WaehlerId, Waehler list>
 
 let api = Api.makeProxy<IApi> ()
 

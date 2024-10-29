@@ -2,7 +2,8 @@ module Db
 
 open System
 open LiteDB
-open Shared
+open Entity
+open Microsoft.Extensions.Logging
 
 let private dbName = "wahlapp.db"
 let private lockObj = obj () // Global lock object

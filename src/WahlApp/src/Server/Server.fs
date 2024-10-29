@@ -2,12 +2,11 @@ module Server
 
 open SAFE
 open Saturn
-open Shared
-open System
-open Db
 open Microsoft.Extensions.Logging
 open Microsoft.AspNetCore.Http
 open Giraffe
+open Api
+open Dto
 
 // Your API logic here
 let api (ctx: HttpContext) = {
@@ -15,11 +14,24 @@ let api (ctx: HttpContext) = {
     addWaehler = WaehlerLogic.addWaehler
     deleteWaehler = WaehlerLogic.deleteWaehler
 
-    getKandidaten = KandidatLogic.getKandidaten
-    addKandidat = KandidatLogic.addKandidat
+    getKandidaten =
+        fun a ->
+            let logger = ctx.GetLogger()
+
+            try
+                logger.LogInformation("-------------------------------------------------------------------------1")
+                let res = KandidatLogic.getKandidaten a
+                logger.LogInformation("-------------------------------------------------------------------------2")
+                res
+            with ex ->
+                logger.LogError("------------------- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", ex)
+
+                async.Return []
+    addKandidat = fun k -> KandidatLogic.addKandidat (k |> Dto.ToKandidat)
     deleteKandidat = KandidatLogic.deleteKandidat
 
     waehlen = WahlLogic.waehlen
+    verteilen = WahlLogic.verteilen
     getAuswertung = WahlLogic.getAuswertung
 }
 
@@ -27,10 +39,10 @@ let webApp = Api.make api
 
 let app = application {
     use_router webApp
-    memory_cache
+    // memory_cache
     use_static "public"
     use_gzip
-    logging (fun logger -> logger.SetMinimumLevel LogLevel.Debug |> ignore)
+    logging (fun logger -> logger.SetMinimumLevel LogLevel.Information |> ignore)
 }
 
 [<EntryPoint>]

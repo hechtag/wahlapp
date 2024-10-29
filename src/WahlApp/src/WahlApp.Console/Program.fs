@@ -1,19 +1,17 @@
 ﻿open LiteDB
-use db = new LiteDatabase("myData.db")
+open Entity
+open Dto
+open LiteDB
+open LiteDB.FSharp
+open LiteDB.FSharp.Extensions
 
-type Test() =
-    member val Name = "" with get, set
-    override this.ToString() = sprintf "[ %s ]" this.Name
-
-let col = db.GetCollection<Test>("test")
-let test = Test()
-test.Name <- "test"
+// let mapper = FSharpBsonMapper()
+use db = new LiteDatabase("simple.db") //, mapper)
 
 
-col.Insert(test)
-test.Name <- test.Name + "2"
+let col = db.GetCollection<KandidatDto>("test")
+let jeff = Kandidat.create "Jeff" |> Dto.FromKandidat
+col.Insert(jeff)
 
-// col.Update(test)
-
-let results = col.Find(fun x -> x.Name = "test") |> Seq.toList
-printfn "%O" results
+let asdf = col.FindAll() |> Seq.toList
+asdf |> List.iter (fun j -> printfn "%A" j)

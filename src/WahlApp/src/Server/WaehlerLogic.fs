@@ -1,9 +1,14 @@
 module WaehlerLogic
 
-open Shared
+open Entity
+open Microsoft.Extensions.Logging
 
 let colName = "waehler"
-let getWaehlers () : Async<Waehler list> = async { return Db.findAll colName |> List.ofSeq }
+
+let getWaehlers () : Async<Waehler list> = async {
+    return Db.findAll colName |> List.ofSeq
+
+}
 
 let addWaehler waehler = async {
     return
@@ -12,7 +17,7 @@ let addWaehler waehler = async {
         | Error e -> failwith e
 }
 
-let deleteWaehler id : Async<Waehler list> = async {
-    do Db.delete<Waehler> colName id
+let deleteWaehler (id: WaehlerId) : Async<Waehler list> = async {
+    do Db.delete<Waehler> colName (id |> Waehler.Wa)
     return! getWaehlers ()
 }
