@@ -8,11 +8,7 @@ open System
 let waehlen (kandidatId: KandidatId, waehlerId : WaehlerId) : Async<WaehlerDb list> = async {
     let waehler = Db.getById WaehlerLogic.colName (waehlerId |> Waehler.Wa) |> Db.ToWaehler
 
-    let newWaehler = {
-        waehler with
-            KandidatId = Some kandidatId
-            VerteilerId = None
-    }
+    let newWaehler = { waehler with Status = Gewaehlt kandidatId }
 
     let asdf = Db.update WaehlerLogic.colName (newWaehler|> Db.FromWaehler)
     return! WaehlerLogic.getWaehlers ()
@@ -21,28 +17,15 @@ let waehlen (kandidatId: KandidatId, waehlerId : WaehlerId) : Async<WaehlerDb li
 let verteilen (verteilerId: WaehlerId, waehlerId: WaehlerId) : Async<WaehlerDb list> = async {
     let waehler = Db.getById WaehlerLogic.colName (waehlerId |> Waehler.Wa) |> Db.ToWaehler
 
-    let newWaehler = {
-        waehler with
-            VerteilerId = Some verteilerId
-            KandidatId = None
-    }
+    let newWaehler = { waehler with Status = Vertraut verteilerId; }
 
     let asdf = Db.update WaehlerLogic.colName (newWaehler |> Db.FromWaehler)
     return! WaehlerLogic.getWaehlers ()
 }
 
-let optBoolK (k: KandidatId) (w: Waehler)  :bool =
-    match w.KandidatId with
-    | Some id -> id = k
-    | None -> false
-
-let optBoolV (k: WaehlerId) (w: Waehler)  :bool =
-    match w.VerteilerId with
-    | Some id -> id = k
-    | None -> false
 type WaehlerAgg = {Id: WaehlerId; Anzahl: int}
 let rec zaehleVertraute (waehler: Waehler list) (waehlerAgg: WaehlerAgg) : WaehlerAgg=
-    let vertraute = waehler |> List.filter (optBoolV waehlerAgg.Id)
+    let vertraute = waehler |> List.filter (Waehler.optBoolV waehlerAgg.Id)
     let fold agg (b:Waehler)  =
         let zwischenAgg =(zaehleVertraute waehler {Id= b.Id; Anzahl = 1 })
         {agg with Anzahl = agg.Anzahl + zwischenAgg.Anzahl }
@@ -50,7 +33,7 @@ let rec zaehleVertraute (waehler: Waehler list) (waehlerAgg: WaehlerAgg) : Waehl
 
 
 let rechneTest (kandidatId: KandidatId) (waehler: Waehler list): KandidatenAgg =
-    let direkteWaehler = waehler |> List.filter (optBoolK kandidatId)
+    let direkteWaehler = waehler |> List.filter (Waehler.optBoolK kandidatId)
     let fold  (agg:KandidatenAgg) (erster: Waehler)  =
         let zwischenAgg = zaehleVertraute waehler {Id = erster.Id; Anzahl = 1 }
         {agg with Anzahl = agg.Anzahl +  zwischenAgg.Anzahl}

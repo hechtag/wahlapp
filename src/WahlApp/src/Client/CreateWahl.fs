@@ -146,9 +146,7 @@ module ViewComponents =
                                                                   prop.text kandidat.Name
                                                                   prop.value (kandidat.Id |> Kandidat.Ka)
                                                                   prop.selected (
-                                                                      waehler.KandidatId
-                                                                      |> Option.map (fun kId -> kandidat.Id = kId)
-                                                                      |> Option.defaultValue false
+                                                                      waehler |> Waehler.optBoolK kandidat.Id
                                                                   )
                                                               ]
                                                       ]
@@ -164,12 +162,7 @@ module ViewComponents =
                                                               Html.option [
                                                                   prop.text wa.Name
                                                                   prop.value (wa.Id |> Waehler.Wa)
-                                                                  prop.selected (
-                                                                      waehler.VerteilerId
-                                                                      |> Utils.mapAndDefault
-                                                                          (fun vId -> wa.Id = vId)
-                                                                          false
-                                                                  )
+                                                                  prop.selected ( waehler |> Waehler.optBoolV wa.Id )
                                                               ]
                                                       ]
                                                   ]]

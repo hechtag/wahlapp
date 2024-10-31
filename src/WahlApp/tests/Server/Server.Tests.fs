@@ -6,11 +6,11 @@ open Model
 open Shared
 open Server
 
-let jannisWaehlt kandidatId ={(Waehler.create "Jannis")  with  KandidatId =Some kandidatId }
-let jannisVertraut verteilerId ={(Waehler.create "Jannis")  with  VerteilerId =Some verteilerId }
-let muriWaehlt kandidatId ={(Waehler.create "Muri")  with  KandidatId =Some kandidatId }
-let muriVertraut verteilerId ={(Waehler.create "Muri")  with  VerteilerId =Some verteilerId }
-let philippVertraut verteilerId ={(Waehler.create "Philipp")  with  VerteilerId =Some verteilerId }
+let jannisWaehlt kandidatId ={(Waehler.create "Jannis")  with  Status = Gewaehlt kandidatId }
+let jannisVertraut verteilerId ={(Waehler.create "Jannis")  with  Status = Vertraut verteilerId }
+let muriWaehlt kandidatId ={(Waehler.create "Muri")  with  Status =Gewaehlt kandidatId }
+let muriVertraut verteilerId ={(Waehler.create "Muri")  with  Status =Vertraut verteilerId }
+let philippVertraut verteilerId ={(Waehler.create "Philipp")  with  Status =Vertraut verteilerId }
 let pizza = Kandidat.create "Pizza"
 let grillen = Kandidat.create "Grillen"
 

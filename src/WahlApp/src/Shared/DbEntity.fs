@@ -14,18 +14,32 @@ type KandidatenAggDb = { Id: Guid; Anzahl: int } interface IDb
 type AuswertungDb = { Kandidaten: KandidatenAggDb list } interface IDb
 
 module Db =
-    let ToWaehler (dto: WaehlerDb) : Waehler = {
+    let private toStatus (waehlerDb:WaehlerDb): WaehlerStatus =
+        match waehlerDb.KandidatId, waehlerDb.VerteilerId with
+        |Option.None, Option.None -> NichtGewaehlt
+        |Some kId , _ ->   kId |> Kandidat.KC |> Gewaehlt
+        |_, Some wId ->  wId |> Waehler.WC |> Vertraut
+
+
+    let ToWaehler (dto: WaehlerDb) : Waehler =
+        {
         Id = dto.Id |> Waehler.WC
         Name = dto.Name
-        KandidatId = dto.KandidatId |> Option.map Kandidat.KC
-        VerteilerId = dto.VerteilerId |> Option.map Waehler.WC
+        Status = toStatus dto
     }
 
-    let FromWaehler (dto: Waehler) : WaehlerDb = {
+    let fromStatus (waehler:Waehler) : Guid option* Guid option =
+        match waehler.Status with
+        | NichtGewaehlt -> None, None
+        | Gewaehlt kandidatId -> Some (kandidatId |> Kandidat.Ka), None
+        | Vertraut waehlerId -> None, Some (waehlerId |> Waehler.Wa)
+    let FromWaehler (dto: Waehler) : WaehlerDb =
+        let kandidatId , waehlerId = fromStatus dto
+        {
         Id = dto.Id |> Waehler.Wa
         Name = dto.Name
-        KandidatId = dto.KandidatId |> Option.map Kandidat.Ka
-        VerteilerId = dto.VerteilerId |> Option.map Waehler.Wa
+        KandidatId = kandidatId
+        VerteilerId = waehlerId
     }
 
     let ToKandidat (dto: KandidatDb) : Kandidat = {
