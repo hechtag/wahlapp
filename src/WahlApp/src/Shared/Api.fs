@@ -17,4 +17,5 @@ type IApi = {
     waehlen: KandidatId * WaehlerId -> Async<WaehlerDb list>
     verteilen: WaehlerId * WaehlerId -> Async<WaehlerDb list>
     getAuswertung: unit -> Async<Auswertung>
+    getVertraute: unit -> Async<(WaehlerId * Waehler list) list>
 }

@@ -51,4 +51,24 @@ let getAuswertung ()  : Async<Auswertung> = async {
     return { Kandidaten = asdf }
 }
 
+let rec collectVertrautenIds (waehlerList: Waehler list) (waehler: Waehler): WaehlerId list=
+    let vertraute =waehlerList |> List.filter  (Waehler.optBoolV waehler.Id )
+    let vertrIds = vertraute |> List.map _.Id
+    vertrIds @ (vertraute |> List.collect (collectVertrautenIds waehlerList))
+let getVertrauteFor (waehlerList: Waehler list) (waehler:Waehler) : WaehlerId * Waehler list =
+    let ids = collectVertrautenIds waehlerList waehler
+    let res = waehlerList
+                  |> List.filter (fun w -> w.Id <> waehler.Id)
+                  |> List.filter ((fun w -> List.contains w.Id ids ) >> not)
+
+    waehler.Id, res
+
+
+
+let getVertraute () :Async<(WaehlerId * Waehler list) list> =
+    async {
+        let! waehlerDb = WaehlerLogic.getWaehlers ()
+        let waehler = waehlerDb |> List.map Db.ToWaehler
+        return waehler |> List.map (getVertrauteFor waehler)
+    }
 

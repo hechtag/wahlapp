@@ -33,6 +33,7 @@ let api (ctx: HttpContext) = {
     waehlen = WahlLogic.waehlen
     verteilen = WahlLogic.verteilen
     getAuswertung = WahlLogic.getAuswertung
+    getVertraute = WahlLogic.getVertraute
 }
 
 let webApp = Api.make api

@@ -14,8 +14,8 @@ let philippVertraut verteilerId ={(Waehler.create "Philipp")  with  Status =Vert
 let pizza = Kandidat.create "Pizza"
 let grillen = Kandidat.create "Grillen"
 
-let server =
-    testList "Server" [
+let auswertung =
+    testList "Auswertung" [
         testCase "single person votes"
         <| fun _ ->
             let waehlers = [jannisWaehlt pizza.Id]
@@ -75,7 +75,66 @@ let server =
             let expectedResult = {Id = pizza.Id; Anzahl = 2 }
             Expect.equal result expectedResult "Result should be ok"    ]
 
-let all = testList "All" [ Shared.Tests.shared; server ]
+let vertraute =
+    testList "Vertraute" [
+        testCase "no waehler"
+        <| fun _ ->
+            let jannis  = jannisWaehlt pizza.Id
+            let waehlers = []
+            let result = WahlLogic.getVertrauteFor  waehlers jannis
+
+            let expectedResult = jannis.Id, []
+            Expect.equal result expectedResult "Pizza should be counted "
+        testCase "only oneself"
+        <| fun _ ->
+            let jannis  = jannisWaehlt pizza.Id
+            let waehlers = [jannis]
+            let result = WahlLogic.getVertrauteFor  waehlers jannis
+
+            let expectedResult = jannis.Id, []
+            Expect.equal result expectedResult "Pizza should be counted "
+        testCase "another vertrauter"
+        <| fun _ ->
+            let jannis  = jannisWaehlt pizza.Id
+            let muri  = muriWaehlt pizza.Id
+            let waehlers = [jannis; muri]
+            let result = WahlLogic.getVertrauteFor  waehlers jannis
+
+            let expectedResult = jannis.Id, [muri]
+            Expect.equal result expectedResult "Pizza should be counted "
+        testCase "mu vertraut"
+        <| fun _ ->
+            let jannis  = jannisWaehlt pizza.Id
+            let muri  = muriVertraut jannis.Id
+            let waehlers = [jannis; muri]
+            let result = WahlLogic.getVertrauteFor  waehlers jannis
+
+            let expectedResult = jannis.Id, []
+            Expect.equal result expectedResult "Pizza should be counted "
+        testCase "50 percent trust"
+        <| fun _ ->
+            let jannis  = jannisWaehlt pizza.Id
+            let muri  = muriWaehlt pizza.Id
+            let philipp  = philippVertraut jannis.Id
+            let waehlers = [jannis; muri; philipp]
+            let result = WahlLogic.getVertrauteFor  waehlers jannis
+
+            let expectedResult = jannis.Id, [muri]
+            Expect.equal result expectedResult "Pizza should be counted "
+
+        testCase "chain"
+        <| fun _ ->
+            let jannis  = jannisWaehlt pizza.Id
+            let muri  = muriVertraut jannis.Id
+            let philipp  = philippVertraut muri.Id
+            let waehlers = [jannis; muri; philipp]
+            let result = WahlLogic.getVertrauteFor  waehlers jannis
+
+            let expectedResult = jannis.Id, []
+            Expect.equal result expectedResult "Pizza should be counted "
+             ]
+
+let all = testList "All" [ Shared.Tests.shared; auswertung; vertraute ]
 
 [<EntryPoint>]
 let main _ = runTestsWithCLIArgs [] [||] all

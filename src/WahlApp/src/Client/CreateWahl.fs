@@ -8,26 +8,24 @@ open System
 open Api
 open DbEntity
 
-
 type Model = {
     Waehler: RemoteData<Waehler list>
     Kandidaten: RemoteData<Kandidat list>
     Auswertung: RemoteData<Auswertung>
+    Vertraute: RemoteData< (WaehlerId * Waehler list) list>
 }
 
-
-
 type Msg =
-    | LoadData of ApiCall<unit, WaehlerDb list * KandidatDb list * Auswertung>
-    | Waehlen of ApiCall<KandidatId * WaehlerId, WaehlerDb list * Auswertung>
-    | Verteilen of ApiCall<WaehlerId * WaehlerId, WaehlerDb list * Auswertung>
-
+    | LoadData of ApiCall<unit, WaehlerDb list * KandidatDb list * Auswertung * (WaehlerId * Waehler list) list>
+    | Waehlen of ApiCall<KandidatId * WaehlerId, WaehlerDb list * Auswertung * (WaehlerId * Waehler list) list>
+    | Verteilen of ApiCall<WaehlerId * WaehlerId, WaehlerDb list * Auswertung * (WaehlerId * Waehler list) list>
 
 let init () =
     let initialModel = {
         Waehler = NotStarted
         Kandidaten = NotStarted
         Auswertung = NotStarted
+        Vertraute =  NotStarted
     }
 
     let initialCmd = LoadData(Start()) |> Cmd.ofMsg
@@ -41,7 +39,8 @@ let refreshPage () = async {
     let! waehler = api.getWaehlers ()
     let! kandidaten = api.getKandidaten ()
     let! auswertung = api.getAuswertung ()
-    return waehler, kandidaten, auswertung
+    let! vertraute = api.getVertraute ()
+    return waehler, kandidaten, auswertung, vertraute
 }
 
 let update msg model =
@@ -57,14 +56,16 @@ let update msg model =
                     Waehler = Loading
                     Kandidaten = Loading
                     Auswertung = Loading
+                    Vertraute = Loading
             },
             cmd
-        | Finished(waehler, kandidaten, auswertung) ->
+        | Finished(waehler, kandidaten, auswertung, vertraute) ->
             {
                 model with
                     Waehler = Loaded (waehler |> List.map Db.ToWaehler)
                     Kandidaten = Loaded(kandidaten |> List.map Db.ToKandidat)
                     Auswertung = Loaded auswertung
+                    Vertraute =  Loaded vertraute
             },
             Cmd.none
     | Waehlen msg ->
@@ -74,17 +75,19 @@ let update msg model =
             let tasks () = async {
                 let! waehlerList = api.waehlen (kandidatId, waehlerId)
                 let! auswertung = api.getAuswertung ()
-                return waehlerList, auswertung
+                let! vertraute = api.getVertraute ()
+                return waehlerList, auswertung, vertraute
             }
 
             let cmd = Cmd.OfAsync.perform tasks () (Finished >> Waehlen)
 
             { model with Waehler = Loading }, cmd
-        | Finished(waehler, auswertung) ->
+        | Finished(waehler, auswertung, vertraute) ->
             {
                 model with
                     Waehler =  waehler |> List.map Db.ToWaehler |> Loaded
                     Auswertung = Loaded auswertung
+                    Vertraute = Loaded vertraute
             },
             Cmd.none
     | Verteilen msg ->
@@ -94,17 +97,20 @@ let update msg model =
             let tasks () = async {
                 let! waehlerList = api.verteilen (verteilerId, waehlerId)
                 let! auswertung = api.getAuswertung ()
-                return waehlerList, auswertung
+                let! vertraute = api.getVertraute ()
+
+                return waehlerList, auswertung, vertraute
             }
 
             let cmd = Cmd.OfAsync.perform tasks () (Finished >> Waehlen)
 
             { model with Waehler = Loading }, cmd
-        | Finished(waehler, auswertung) ->
+        | Finished(waehler, auswertung, vertraute) ->
             {
                 model with
                     Waehler =  waehler |> List.map Db.ToWaehler |> Loaded
                     Auswertung = Loaded auswertung
+                    Vertraute = Loaded vertraute
             },
             Cmd.none
 
@@ -113,6 +119,10 @@ let get (kandidatenList: Kandidat list) (kandidatId: KandidatId option) : string
     |> Option.bind (fun id -> kandidatenList |> List.tryFind (fun k -> k.Id = id))
     |> Option.map _.Name
     |> Option.defaultValue "nix"
+
+let getVertraute (waehlerId: WaehlerId) (vertrautenList: (WaehlerId * Waehler list) list): Waehler list=
+    let list =vertrautenList |> List.find (fun (id,l) -> id = waehlerId)
+    list |> snd
 
 module ViewComponents =
     let waehlerList model dispatch =
@@ -123,8 +133,8 @@ module ViewComponents =
                 Html.ol [
                     prop.className "list-decimal ml-6"
                     prop.children [
-                        match model.Waehler, model.Kandidaten with
-                        | Loaded waehlerList, Loaded kandidatenList ->
+                        match model.Waehler, model.Kandidaten, model.Vertraute with
+                        | Loaded waehlerList, Loaded kandidatenList, Loaded vertrautenList  ->
                             for waehler in waehlerList do
                                 Html.li [
                                     prop.style [
@@ -157,8 +167,7 @@ module ViewComponents =
                                                           dispatch (Verteilen(Start(Waehler.parse r, waehler.Id))))
                                                       prop.children [
                                                           Html.option [ prop.text "nix"; prop.value (None.ToString()) ]
-                                                          for wa in
-                                                              waehlerList |> List.filter (fun w -> w.Id <> waehler.Id) do
+                                                          for wa in vertrautenList |> getVertraute waehler.Id do
                                                               Html.option [
                                                                   prop.text wa.Name
                                                                   prop.value (wa.Id |> Waehler.Wa)
@@ -167,39 +176,21 @@ module ViewComponents =
                                                       ]
                                                   ]]
                                 ]
-                        | NotStarted, _
-                        | _, NotStarted -> Html.text "Not Started."
-                        | Loading, _
-                        | _, Loading -> Html.text "Loading..."
+                        | NotStarted, _, _
+                        | _, NotStarted, _
+                        | _, _, NotStarted -> Html.text "Not Started."
+                        | Loading, _, _
+                        | _, Loading, _
+                        | _,_, Loading -> Html.text "Loading..."
                     ]
                 ]
             ]
         ]
-
-    let kandidatenList model dispatch =
-        Html.div [
-            prop.className "bg-white/80 rounded-md shadow-md p-4 w-5/6 lg:w-3/4 lg:max-w-2xl"
-            prop.children [
-                Html.h1 [ prop.text "Kandidaten" ]
-                Html.ol [
-                    prop.className "list-decimal ml-6"
-                    prop.children [
-                        match model.Kandidaten with
-                        | NotStarted -> Html.text "Not Started."
-                        | Loading -> Html.text "Loading..."
-                        | Loaded kandidaten ->
-                            for kandidat in kandidaten do
-                                Html.li [ prop.className "my-1"; prop.text kandidat.Name ]
-                    ]
-                ]
-            ]
-        ]
-
     let auswertung model dispatch =
         Html.div [
             prop.className "bg-white/80 rounded-md shadow-md p-4 w-5/6 lg:w-3/4 lg:max-w-2xl"
             prop.children [
-                Html.h1 [ prop.text "Wähler" ]
+                Html.h1 [ prop.text "Auswertung" ]
                 Html.ol [
                     prop.className "list-decimal ml-6"
                     prop.children [
@@ -227,6 +218,5 @@ module ViewComponents =
 let view model dispatch =
     Html.div [
         prop.children[ViewComponents.waehlerList model dispatch
-                      ViewComponents.kandidatenList model dispatch
                       ViewComponents.auswertung model dispatch]
     ]
