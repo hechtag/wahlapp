@@ -1,25 +1,25 @@
 module KandidatLogic
 
-open Entity
+open Model
 open Microsoft.Extensions.Logging
-open Dto
+open DbEntity
 
 let colName = "kandidat"
 
-let getKandidaten () : Async<KandidatDto list> = async {
+let getKandidaten () : Async<KandidatDb list> = async {
     return Db.findAll colName |> List.ofSeq
 
 }
 
 let addKandidat kandidat = async {
     return
-        match Db.add<KandidatDto> colName kandidat with
+        match Db.add<KandidatDb> colName kandidat with
         | Ok w -> w //|> Dto.FromKandidat
         | Error e -> failwith e
 
 }
 
-let deleteKandidat (id: KandidatId) : Async<KandidatDto list> = async {
-    do Db.delete<Kandidat> colName (id |> Kandidat.Ka)
+let deleteKandidat (id: KandidatId) : Async<KandidatDb list> = async {
+    do Db.delete<KandidatDb> colName (id |> Kandidat.Ka)
     return! getKandidaten ()
 }

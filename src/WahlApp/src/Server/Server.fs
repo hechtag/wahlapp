@@ -6,7 +6,7 @@ open Microsoft.Extensions.Logging
 open Microsoft.AspNetCore.Http
 open Giraffe
 open Api
-open Dto
+open DbEntity
 
 // Your API logic here
 let api (ctx: HttpContext) = {
@@ -27,7 +27,7 @@ let api (ctx: HttpContext) = {
                 logger.LogError("------------------- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", ex)
 
                 async.Return []
-    addKandidat = fun k -> KandidatLogic.addKandidat (k |> Dto.ToKandidat)
+    addKandidat = KandidatLogic.addKandidat
     deleteKandidat = KandidatLogic.deleteKandidat
 
     waehlen = WahlLogic.waehlen

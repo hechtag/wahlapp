@@ -1,19 +1,20 @@
 module Api
 
-open Entity
-open Dto
+open System
+open Model
+open DbEntity
 
 
 type IApi = {
-    getKandidaten: unit -> Async<KandidatDto list>
-    addKandidat: KandidatDto -> Async<KandidatDto>
-    deleteKandidat: KandidatId -> Async<KandidatDto list>
+    getKandidaten: unit -> Async<KandidatDb list>
+    addKandidat: KandidatDb -> Async<KandidatDb>
+    deleteKandidat: KandidatId -> Async<KandidatDb list>
 
-    getWaehlers: unit -> Async<Waehler list>
-    addWaehler: Waehler -> Async<Waehler>
-    deleteWaehler: WaehlerId -> Async<Waehler list>
+    getWaehlers: unit -> Async<WaehlerDb list>
+    addWaehler: WaehlerDb -> Async<WaehlerDb>
+    deleteWaehler: WaehlerId -> Async<WaehlerDb list>
 
-    waehlen: KandidatId * WaehlerId -> Async<Waehler list>
-    verteilen: WaehlerId * WaehlerId -> Async<Waehler list>
+    waehlen: KandidatId * WaehlerId -> Async<WaehlerDb list>
+    verteilen: WaehlerId * WaehlerId -> Async<WaehlerDb list>
     getAuswertung: unit -> Async<Auswertung>
 }

@@ -3,10 +3,10 @@ module CreateWahl
 open Feliz
 open Elmish
 open SAFE
-open Entity
+open Model
 open System
 open Api
-open Dto
+open DbEntity
 
 
 type Model = {
@@ -18,9 +18,9 @@ type Model = {
 
 
 type Msg =
-    | LoadData of ApiCall<unit, Waehler list * KandidatDto list * Auswertung>
-    | Waehlen of ApiCall<KandidatId * WaehlerId, Waehler list * Auswertung>
-    | Verteilen of ApiCall<WaehlerId * WaehlerId, Waehler list * Auswertung>
+    | LoadData of ApiCall<unit, WaehlerDb list * KandidatDb list * Auswertung>
+    | Waehlen of ApiCall<KandidatId * WaehlerId, WaehlerDb list * Auswertung>
+    | Verteilen of ApiCall<WaehlerId * WaehlerId, WaehlerDb list * Auswertung>
 
 
 let init () =
@@ -62,8 +62,8 @@ let update msg model =
         | Finished(waehler, kandidaten, auswertung) ->
             {
                 model with
-                    Waehler = Loaded waehler
-                    Kandidaten = Loaded(kandidaten |> List.map Dto.ToKandidat)
+                    Waehler = Loaded (waehler |> List.map Db.ToWaehler)
+                    Kandidaten = Loaded(kandidaten |> List.map Db.ToKandidat)
                     Auswertung = Loaded auswertung
             },
             Cmd.none
@@ -83,7 +83,7 @@ let update msg model =
         | Finished(waehler, auswertung) ->
             {
                 model with
-                    Waehler = Loaded waehler
+                    Waehler =  waehler |> List.map Db.ToWaehler |> Loaded
                     Auswertung = Loaded auswertung
             },
             Cmd.none
@@ -103,7 +103,7 @@ let update msg model =
         | Finished(waehler, auswertung) ->
             {
                 model with
-                    Waehler = Loaded waehler
+                    Waehler =  waehler |> List.map Db.ToWaehler |> Loaded
                     Auswertung = Loaded auswertung
             },
             Cmd.none
@@ -210,8 +210,8 @@ module ViewComponents =
                 Html.ol [
                     prop.className "list-decimal ml-6"
                     prop.children [
-                        match model.Auswertung with
-                        | Loaded auswertung ->
+                        match (model.Auswertung, model.Kandidaten) with
+                        | Loaded auswertung, Loaded kandidatenList ->
                             for kandidat in auswertung.Kandidaten do
                                 Html.li [
                                     prop.style [
@@ -221,11 +221,11 @@ module ViewComponents =
                                         style.alignItems.baseline
                                     ]
                                     prop.className "my-1"
-                                    prop.children[Html.div[prop.text "name"]
+                                    prop.children[Html.div[prop.text (kandidatenList |> List.find (fun k -> k.Id= kandidat.Id)).Name]
                                                   Html.div [ prop.text (kandidat.Anzahl.ToString()) ]]
                                 ]
-                        | NotStarted -> Html.text "Not Started."
-                        | Loading -> Html.text "Loading..."
+                        | NotStarted ,_ | _ , NotStarted-> Html.text "Not Started."
+                        | Loading , _ | _ , Loading-> Html.text "Loading..."
                     ]
                 ]
             ]

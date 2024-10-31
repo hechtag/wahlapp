@@ -1,11 +1,12 @@
 module WahlLogic
 
-open Entity
+open DbEntity
+open Model
 open System
 
 
-let waehlen (kandidatId, waehlerId: WaehlerId) : Async<Waehler list> = async {
-    let waehler = Db.getById WaehlerLogic.colName (waehlerId |> Waehler.Wa)
+let waehlen (kandidatId: KandidatId, waehlerId : WaehlerId) : Async<WaehlerDb list> = async {
+    let waehler = Db.getById WaehlerLogic.colName (waehlerId |> Waehler.Wa) |> Db.ToWaehler
 
     let newWaehler = {
         waehler with
@@ -13,12 +14,12 @@ let waehlen (kandidatId, waehlerId: WaehlerId) : Async<Waehler list> = async {
             VerteilerId = None
     }
 
-    let asdf = Db.update WaehlerLogic.colName newWaehler
+    let asdf = Db.update WaehlerLogic.colName (newWaehler|> Db.FromWaehler)
     return! WaehlerLogic.getWaehlers ()
 }
 
-let verteilen (verteilerId: WaehlerId, waehlerId: WaehlerId) : Async<Waehler list> = async {
-    let waehler = Db.getById WaehlerLogic.colName (waehlerId |> Waehler.Wa)
+let verteilen (verteilerId: WaehlerId, waehlerId: WaehlerId) : Async<WaehlerDb list> = async {
+    let waehler = Db.getById WaehlerLogic.colName (waehlerId |> Waehler.Wa) |> Db.ToWaehler
 
     let newWaehler = {
         waehler with
@@ -26,75 +27,45 @@ let verteilen (verteilerId: WaehlerId, waehlerId: WaehlerId) : Async<Waehler lis
             KandidatId = None
     }
 
-    let asdf = Db.update WaehlerLogic.colName newWaehler
+    let asdf = Db.update WaehlerLogic.colName (newWaehler |> Db.FromWaehler)
     return! WaehlerLogic.getWaehlers ()
 }
 
-type GewaehltW = {
-    WaehlerId: WaehlerId
-    VerteilerId: WaehlerId
-}
-
-type GewaehltK = {
-    WaehlerId: WaehlerId
-    KandidatId: KandidatId
-}
-
-let optKandidat (w: Waehler) : GewaehltK option =
+let optBoolK (k: KandidatId) (w: Waehler)  :bool =
     match w.KandidatId with
-    | Some id -> Some { WaehlerId = w.Id; KandidatId = id }
-    | None -> None
+    | Some id -> id = k
+    | None -> false
 
-let optVerteilt (w: Waehler) : GewaehltW option =
+let optBoolV (k: WaehlerId) (w: Waehler)  :bool =
     match w.VerteilerId with
-    | Some id -> Some { WaehlerId = w.Id; VerteilerId = id }
-    | None -> None
-
-let getEntscheider (waehlerList: Waehler list) =
-    waehlerList |> List.choose (optKandidat)
-
-let rec rechneEinen (waehlerList: GewaehltW list) (gewaehlt: GewaehltW) : int =
-    let anhaenger =
-        waehlerList |> List.filter (fun w -> w.VerteilerId = gewaehlt.WaehlerId)
-
-    (List.length anhaenger)
-    + 1
-    + (anhaenger |> List.map (rechneEinen waehlerList) |> List.sum)
-
-let agg zugeordnetList (e: GewaehltK) : KandidatenAgg =
-    let start = {
-        VerteilerId = (Waehler.WC Guid.Empty)
-        WaehlerId = e.WaehlerId
-    }
-
-    let sum = rechneEinen zugeordnetList start
-
-    { Anzahl = sum; Id = e.KandidatId }
-
-let rechne (waehlerList: Waehler list) =
-    let zugeordnetList = waehlerList |> List.choose optVerteilt
-
-    waehlerList |> getEntscheider |> List.map (agg zugeordnetList)
+    | Some id -> id = k
+    | None -> false
+type WaehlerAgg = {Id: WaehlerId; Anzahl: int}
+let rec zaehleVertraute (waehler: Waehler list) (waehlerAgg: WaehlerAgg) : WaehlerAgg=
+    let vertraute = waehler |> List.filter (optBoolV waehlerAgg.Id)
+    let fold agg (b:Waehler)  =
+        let zwischenAgg =(zaehleVertraute waehler {Id= b.Id; Anzahl = 1 })
+        {agg with Anzahl = agg.Anzahl + zwischenAgg.Anzahl }
+    vertraute |> List.fold fold waehlerAgg
 
 
-// let innerJoin (kandidatList: Kandidat list) (waehlerList: Waehler list) =
-//     let grp = waehlerList |> List.choose (optKandidat) |> List.groupBy _.KandidatId
+let rechneTest (kandidatId: KandidatId) (waehler: Waehler list): KandidatenAgg =
+    let direkteWaehler = waehler |> List.filter (optBoolK kandidatId)
+    let fold  (agg:KandidatenAgg) (erster: Waehler)  =
+        let zwischenAgg = zaehleVertraute waehler {Id = erster.Id; Anzahl = 1 }
+        {agg with Anzahl = agg.Anzahl +  zwischenAgg.Anzahl}
+    let vertraute : KandidatenAgg = direkteWaehler |> List.fold  fold {Id =kandidatId; Anzahl = 0 }
 
-//     [
-//         for k in kandidatList do
-//             for (id, w) in grp do
-//                 if k.Id = id then
-//                     yield {
-//                         Name = k.Name
-//                         Id = k.Id
-//                         Anzahl = List.length w
-//                     }
-//     ]
+    {Id = kandidatId; Anzahl = vertraute.Anzahl }
 
-let getAuswertung (logger) : Async<Auswertung> = async {
-    let! waehler = WaehlerLogic.getWaehlers (logger)
-    // let! kandidaten = KandidatLogic.getKandidaten ()
-    let asdf = rechne waehler //innerJoin kandidaten waehler
+let getAuswertung ()  : Async<Auswertung> = async {
+    let! waehlerDb = WaehlerLogic.getWaehlers ()
+    let waehler = waehlerDb|> List.map Db.ToWaehler
+    let! kandidatenDb = KandidatLogic.getKandidaten ()
+    let kandidaten = kandidatenDb|> List.map Db.ToKandidat
 
+    let asdf = kandidaten |> List.map (fun k ->  rechneTest k.Id waehler)
     return { Kandidaten = asdf }
 }
+
+

@@ -6,7 +6,6 @@ open Fable.Mocha
 open Expecto
 #endif
 
-open Shared
 
 let shared =
     testList "Shared" [

@@ -1,9 +1,10 @@
 module CreateWaehler
 
+open DbEntity
 open Feliz
 open Elmish
 open SAFE
-open Entity
+open Model
 open System
 open Api
 
@@ -16,9 +17,9 @@ type Model = {
 
 type Msg =
     | SetInputWaehler of string
-    | SaveWaehler of ApiCall<string, Waehler>
-    | LoadData of ApiCall<unit, Waehler list>
-    | DeleteWaehler of ApiCall<WaehlerId, Waehler list>
+    | SaveWaehler of ApiCall<string, WaehlerDb>
+    | LoadData of ApiCall<unit, WaehlerDb list>
+    | DeleteWaehler of ApiCall<WaehlerId, WaehlerDb list>
 
 let api = Api.makeProxy<IApi> ()
 
@@ -41,19 +42,19 @@ let update msg model =
             let cmd = Cmd.OfAsync.perform api.getWaehlers () (Finished >> LoadData)
 
             { model with Waehler = Loading }, cmd
-        | Finished(waehler) -> { model with Waehler = Loaded waehler }, Cmd.none
+        | Finished(waehler) -> { model with Waehler = Loaded (waehler|>List.map Db.ToWaehler) }, Cmd.none
     | SaveWaehler msg ->
         match msg with
         | Start text ->
             let cmd =
                 let waehler = Waehler.create text
-                Cmd.OfAsync.perform api.addWaehler waehler (Finished >> SaveWaehler)
+                Cmd.OfAsync.perform api.addWaehler (waehler |> Db.FromWaehler) (Finished >> SaveWaehler)
 
             { model with WaehlerInput = "" }, cmd
         | Finished waehler ->
             {
                 model with
-                    Waehler = model.Waehler |> RemoteData.map (fun waehlerList -> waehlerList @ [ waehler ])
+                    Waehler = model.Waehler |> RemoteData.map (fun waehlerList -> waehlerList @ [ (waehler|>Db.ToWaehler) ])
             },
             Cmd.none
     | DeleteWaehler msg ->
@@ -61,7 +62,7 @@ let update msg model =
         | Start id ->
             let cmd = Cmd.OfAsync.perform api.deleteWaehler id (Finished >> DeleteWaehler)
             { model with Waehler = Loading }, cmd
-        | Finished list -> { model with Waehler = Loaded list }, Cmd.none
+        | Finished list -> { model with Waehler = Loaded (list|> List.map Db.ToWaehler) }, Cmd.none
 
 module ViewComponents =
     let waehlerAction model dispatch =

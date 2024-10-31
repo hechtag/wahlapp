@@ -1,6 +1,6 @@
 ﻿open LiteDB
-open Entity
-open Dto
+open Model
+open DbEntity
 open LiteDB
 open LiteDB.FSharp
 open LiteDB.FSharp.Extensions
@@ -9,8 +9,8 @@ open LiteDB.FSharp.Extensions
 use db = new LiteDatabase("simple.db") //, mapper)
 
 
-let col = db.GetCollection<KandidatDto>("test")
-let jeff = Kandidat.create "Jeff" |> Dto.FromKandidat
+let col = db.GetCollection<KandidatDb>("test")
+let jeff = Kandidat.create "Jeff" |> Db.FromKandidat
 col.Insert(jeff)
 
 let asdf = col.FindAll() |> Seq.toList

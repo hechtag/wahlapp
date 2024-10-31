@@ -3,10 +3,10 @@ module CreateKandidat
 open Feliz
 open Elmish
 open SAFE
-open Entity
+open Model
 open System
 open Api
-open Dto
+open DbEntity
 
 type Model = {
     Kandidaten: RemoteData<Kandidat list>
@@ -14,10 +14,10 @@ type Model = {
 }
 
 type Msg =
-    | LoadData of ApiCall<unit, KandidatDto list>
+    | LoadData of ApiCall<unit, KandidatDb list>
     | SetInputKandidat of string
-    | SaveKandidat of ApiCall<string, KandidatDto>
-    | DeleteKandidat of ApiCall<Guid, KandidatDto list>
+    | SaveKandidat of ApiCall<string, KandidatDb>
+    | DeleteKandidat of ApiCall<Guid, KandidatDb list>
 
 let api = Api.makeProxy<IApi> ()
 
@@ -44,7 +44,7 @@ let update message model =
         | Finished(kandidaten) ->
             {
                 model with
-                    Kandidaten = Loaded(kandidaten |> List.map Dto.ToKandidat)
+                    Kandidaten = Loaded(kandidaten |> List.map Db.ToKandidat)
             },
             Cmd.none
     | SaveKandidat msg ->
@@ -52,7 +52,7 @@ let update message model =
         | Start text ->
             let cmd =
                 let kandidat = Kandidat.create text
-                Cmd.OfAsync.perform api.addKandidat (kandidat |> Dto.FromKandidat) (Finished >> SaveKandidat)
+                Cmd.OfAsync.perform api.addKandidat (kandidat |> Db.FromKandidat) (Finished >> SaveKandidat)
 
             { model with KandidatInput = "" }, cmd
         | Finished kandidat ->
@@ -60,7 +60,7 @@ let update message model =
                 model with
                     Kandidaten =
                         model.Kandidaten
-                        |> RemoteData.map (fun kandidaten -> kandidaten @ [ kandidat |> Dto.ToKandidat ])
+                        |> RemoteData.map (fun kandidaten -> kandidaten @ [ kandidat |> Db.ToKandidat ])
             },
             Cmd.none
     | DeleteKandidat msg ->
@@ -73,7 +73,7 @@ let update message model =
         | Finished kandidaten ->
             {
                 model with
-                    Kandidaten = Loaded(kandidaten |> List.map Dto.ToKandidat)
+                    Kandidaten = Loaded(kandidaten |> List.map Db.ToKandidat)
             },
             Cmd.none
 
